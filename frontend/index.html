@@ -1,24 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-</head>
-<body>
-  <video id="video" controls width="640"></video>
-
-  <script>
-    const video = document.getElementById("video");
-    const src = "http://localhost:5000/hls/2c3e24f1-9a2a-47fc-88ea-2ae82ffb5873/master.m3u8";
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({ debug: true });
-      hls.loadSource(src);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-        console.log("ABR switched to level:", data.level);
-      });
-    }
-  </script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/video.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StreamFlix</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

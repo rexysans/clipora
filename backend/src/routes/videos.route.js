@@ -6,6 +6,39 @@ import { upload } from "../middleware/upload.js";
 
 const router = Router();
 
+// Get all videos
+router.get("/", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, title, description, status, created_at FROM videos ORDER BY created_at DESC"
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch videos" });
+  }
+});
+
+// Get single video by ID
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      "SELECT id, title, description, status, created_at FROM videos WHERE id = $1",
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch video" });
+  }
+});
+
 router.post("/upload", upload.single("video"), async (req, res) => {
   // console.log(req.body);
   // console.log(req.file);

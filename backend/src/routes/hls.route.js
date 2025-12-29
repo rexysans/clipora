@@ -23,6 +23,8 @@ router.use(
       // required for video players
       res.setHeader("Accept-Ranges", "bytes");
     },
+
+  
   })
 );
 
