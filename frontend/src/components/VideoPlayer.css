@@ -1,7 +1,8 @@
+/* --- BUFFERING / ERROR OVERLAYS --- */
 .overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   color: white;
   display: flex;
   align-items: center;
@@ -11,5 +12,98 @@
 }
 
 .overlay.error {
-  background: rgba(120,0,0,0.7);
+  background: rgba(120, 0, 0, 0.7);
 }
+
+/* --- GEAR ICON SIZE --- */
+/* Makes the gear icon larger (same size as Fullscreen icon) */
+.vjs-icon-cog:before {
+  font-size: 1.8em !important;
+  line-height: 1.6;
+}
+
+/* --- QUALITY SELECTOR MENU --- */
+.vjs-menu-button-popup .vjs-menu {
+  width: 100px;
+  left: -35px;
+  
+  /* FIX 1: Set bottom to 30px (Standard Control Bar Height)
+     This places the menu exactly ON TOP of the bar, removing the gap. */
+  bottom: 0px; 
+  
+  /* FIX 2: Allow the invisible bridge to stick out */
+  overflow: visible; 
+}
+
+/* Text Styling */
+.vjs-menu-item-text {
+  text-transform: none !important;
+  font-size: 14px;
+}
+
+/* Highlight Selected Option */
+.vjs-menu-item.vjs-selected {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ff0000;
+  font-weight: bold;
+}
+
+/* .vjs-menu-item.vjs-selected::after {
+  content: " ✓";
+  float: right;
+  margin-right: 5px;
+  color: #433d3d;
+} */
+
+.vjs-menu-item.vjs-selected::after {
+  content: ""; /* Empty content because we are using an image */
+  display: block;
+  width: 12px;
+  height: 12px;
+  
+  /* This is a Red SVG Checkmark */
+  background-image: url("../assets//checkMark.svg");
+  
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+
+
+
+
+
+
+/* --- HOVER & BRIDGE FIX --- */
+
+/* 1. Show menu on hover */
+.vjs-menu-button-popup.vjs-icon-cog:hover .vjs-menu {
+  display: block;
+}
+
+/* 2. THE INVISIBLE BRIDGE (Gap Filler) */
+.vjs-menu-button-popup.vjs-icon-cog .vjs-menu::before {
+  content: "";
+  display: block;
+  position: absolute;
+  
+  /* This extends the bridge DOWN from the menu to the button */
+  bottom: -30px; /* Matches the menu's bottom height to touch the bar */
+  left: 0;
+  
+  width: 100%;
+  height: 30px; /* Fills the space exactly */
+  
+  background: transparent; /* Invisible but clickable */
+  z-index: 100;
+}
+
+
+.vjs-menu-item {
+  display: flex !important;
+  justify-content: flex-start; /* Aligns everything to the left */
+  align-items: center;
+  gap: 8px; /* <--- CONTROLS THE EXACT GAP HERE */
+}
+
+/* You must also remove 'justify-content: space-between' if you use this option */

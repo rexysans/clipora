@@ -1,21 +1,17 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
 import "./VideoPlayer.css";
+import "videojs-contrib-quality-levels";
 
 export const VideoPlayer = (props) => {
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const { options, onReady } = props;
-  const [isBuffering, setIsBuffering] = useState(false);
-  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    // Make sure Video.js player is only initialized once
     if (!playerRef.current) {
-      // The Video.js player needs to be _inside_ the component el for React 18 Strict Mode.
       const videoElement = document.createElement("video-js");
-
       videoElement.classList.add("vjs-big-play-centered");
       videoRef.current.appendChild(videoElement);
 
@@ -24,50 +20,144 @@ export const VideoPlayer = (props) => {
         onReady && onReady(player);
       }));
 
-      player.on("waiting", () => {
-        setIsBuffering(true);
+      const MenuButton = videojs.getComponent("MenuButton");
+      const MenuItem = videojs.getComponent("MenuItem");
+
+      // --- HELPER: Reset all menu items to unselected ---
+      const resetSelection = (menuItem) => {
+        const parent = menuItem.parentComponent_;
+        if (parent) {
+          parent.children().forEach((child) => {
+            if (child !== menuItem) child.selected(false);
+          });
+        }
+      };
+
+      // --- 1. Resolution Item (720p, 360p...) ---
+      class QualityMenuItem extends MenuItem {
+        constructor(player, options) {
+          super(player, options);
+          this.qualityLevel = options.qualityLevel;
+          this.levels = options.levels;
+        }
+
+        handleClick() {
+          // LOGIC: Enable only this level
+          for (let i = 0; i < this.levels.length; i++) {
+            this.levels[i].enabled = false;
+          }
+          this.qualityLevel.enabled = true;
+
+          // UI: Uncheck siblings, check myself
+          resetSelection(this);
+          this.selected(true);
+        }
+      }
+
+      // --- 2. Auto Item ---
+      class AutoMenuItem extends MenuItem {
+        constructor(player, options) {
+          super(player, options);
+          this.levels = options.levels;
+        }
+
+        handleClick() {
+          // LOGIC: Enable ALL levels
+          for (let i = 0; i < this.levels.length; i++) {
+            this.levels[i].enabled = true;
+          }
+
+          // UI: Uncheck siblings, check myself
+          resetSelection(this);
+          this.selected(true);
+        }
+      }
+
+      // --- 3. The Gear Button ---
+      class QualityMenuButton extends MenuButton {
+        constructor(player, options) {
+          super(player, options);
+          // Update menu when new levels are found
+          this.player().qualityLevels().on('addqualitylevel', () => this.update());
+        }
+
+        createItems() {
+          const levels = this.player().qualityLevels();
+          const items = [];
+
+          // Logic to determine if "Auto" is currently active
+          // (Auto is active if ALL levels are enabled)
+          const isAuto = levels.length > 0 && levels[0].enabled && levels[levels.length - 1].enabled;
+
+          items.push(new AutoMenuItem(this.player(), {
+            label: 'Auto',
+            selectable: true,
+            selected: isAuto, 
+            levels: levels
+          }));
+
+          for (let i = levels.length - 1; i >= 0; i--) {
+            const level = levels[i];
+            if (!level.height) continue;
+
+            // A level is selected ONLY if it's enabled AND Auto is off
+            const isSelected = level.enabled && !isAuto;
+
+            items.push(new QualityMenuItem(this.player(), {
+              label: `${level.height}p`,
+              selectable: true,
+              selected: isSelected,
+              qualityLevel: level,
+              levels: levels
+            }));
+          }
+          return items;
+        }
+
+        buildCSSClass() {
+          return `vjs-icon-cog ${super.buildCSSClass()}`;
+        }
+      }
+
+      if (!videojs.getComponent("QualityMenuButton")) {
+        videojs.registerComponent("QualityMenuButton", QualityMenuButton);
+      }
+
+      player.ready(() => {
+        const qualityLevels = player.qualityLevels();
+        const addGearButton = () => {
+           if (player.controlBar.getChild("QualityMenuButton")) return;
+           const index = player.controlBar.children_.length - 1;
+           player.controlBar.addChild("QualityMenuButton", {}, index);
+        };
+
+        if (qualityLevels.length > 0) addGearButton();
+        else qualityLevels.one("addqualitylevel", addGearButton);
       });
 
-      player.on("playing", () => {
-        setIsBuffering(false);
-        setHasError(false);
-      });
-
-      player.on("error", () => {
-        setHasError(true);
-      });
-
-      // You could update an existing player in the `else` block here
-      // on prop change, for example:
     } else {
       const player = playerRef.current;
-
       player.autoplay(options.autoplay);
       player.src(options.sources);
     }
   }, [options, videoRef]);
 
-  // Dispose the Video.js player when the functional component unmounts
+  // ... rest of your code ...
   useEffect(() => {
-    const player = playerRef.current;
-
-    return () => {
-      if (player && !player.isDisposed()) {
-        player.dispose();
-        playerRef.current = null;
-      }
-    };
-  }, [playerRef]);
-
-  return (
-    <div data-vjs-player style={{ width: "800px", position: "relative" }}>
-      {isBuffering && <div className="overlay"></div>}
-
-      {hasError && <div className="overlay error">Playback failed</div>}
-
-      <div ref={videoRef} />
-    </div>
-  );
+      const player = playerRef.current;
+      return () => {
+        if (player && !player.isDisposed()) {
+          player.dispose();
+          playerRef.current = null;
+        }
+      };
+    }, [playerRef]);
+  
+    return (
+      <div data-vjs-player style={{ width: "800px", position: "relative" }}>
+        <div ref={videoRef} />
+      </div>
+    );
 };
 
 export default VideoPlayer;
