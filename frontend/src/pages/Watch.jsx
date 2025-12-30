@@ -5,7 +5,7 @@ import videojs from "video.js";
 function Watch() {
   const playerRef = useRef(null);
   const videoId = "1db3cf79-5cd2-42ef-870b-706b7c94b059";
-  const videoLink = `http://localhost:5000/hls/${videoId}/master.m3u8`;
+  const videoLink = `http://localhost:8080/hls/${videoId}/master.m3u8`;
 
   function getAnonymousUserId() {
     let id = localStorage.getItem("anon_user_id");

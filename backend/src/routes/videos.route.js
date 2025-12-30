@@ -3,6 +3,7 @@ import pool from "../db.js";
 import { v4 as uuidv4 } from "uuid";
 
 import { upload } from "../middleware/upload.js";
+import { STORAGE } from "../config/storage.js";
 
 const router = Router();
 
@@ -24,15 +25,29 @@ router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      "SELECT id, title, description, status, created_at FROM videos WHERE id = $1",
+      "SELECT id, title, description, status, created_at, hls_key FROM videos WHERE id = $1",
       [id]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Video not found" });
     }
-    
-    res.json(result.rows[0]);
+
+    const video = result.rows[0];
+
+    const playbackUrl =
+      video.hls_key && video.status === "ready"
+        ? `${STORAGE.MEDIA_BASE_URL}/${video.hls_key}`
+        : null;
+
+    res.json({
+      id: video.id,
+      title: video.title,
+      description: video.description,
+      status: video.status,
+      created_at: video.created_at,
+      playbackUrl,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch video" });
@@ -46,7 +61,7 @@ router.post("/upload", upload.single("video"), async (req, res) => {
   try {
     const data = req.body;
     const title = data.title;
-    
+
     if (!req.file) {
       return res.status(400).json({ error: "Video file is required" });
     }
