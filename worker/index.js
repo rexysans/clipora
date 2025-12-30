@@ -156,11 +156,12 @@ async function detectAbandonedJobs() {
 
 async function finalizeJob(jobID, exitCode) {
   const client = await pool.connect();
+  const hlsKey = `hls/${jobID}/master.m3u8`;
   try {
     if (exitCode === 0) {
       await client.query(
-        `UPDATE videos SET status = 'ready', hls_path = $2, claimed_at = NULL WHERE id = $1`,
-        [jobID, `videos/hls/${jobID}`]
+        `UPDATE videos SET status = 'ready', hls_key = $2, claimed_at = NULL WHERE id = $1`,
+        [jobID, hlsKey]
       );
       console.log(`Video ${jobID} marked READY`);
     } else {
