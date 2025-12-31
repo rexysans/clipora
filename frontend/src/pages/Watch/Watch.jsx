@@ -1,5 +1,5 @@
 import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 
 function Watch() {
@@ -64,12 +64,11 @@ function Watch() {
       .catch(() => {});
   }, [videoId]);
 
-  // Pick random recommended videos
-  function getRandomRecommendations(arr, n = 5) {
-    const shuffled = arr.slice().sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, n);
-  }
-  const recommended = getRandomRecommendations(allVideos);
+  // Pick random recommended videos - memoized to prevent reshuffling on re-renders
+  const recommended = useMemo(() => {
+    const shuffled = allVideos.slice().sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 5);
+  }, [allVideos]);
 
   // Format date util (from Home)
   const formatDate = (dateString) => {
@@ -82,7 +81,8 @@ function Watch() {
     return `${Math.floor(diff / 30)} months ago`;
   };
 
-  const videoPlayerOptions = {
+  // Memoize videoPlayerOptions to prevent recreation on re-renders
+  const videoPlayerOptions = useMemo(() => ({
     controls: true,
     responsive: true,
     fluid: true,
@@ -92,7 +92,7 @@ function Watch() {
         type: "application/x-mpegURL",
       },
     ],
-  };
+  }), [videoLink]);
 
   const handlePlayerReady = async (player) => {
     playerRef.current = player;
@@ -158,6 +158,7 @@ function Watch() {
                   <p className={`text-gray-700 dark:text-gray-300 text-base md:text-lg whitespace-pre-line ${descExpanded ? '' : 'line-clamp-3'}`}>{videoData.description}</p>
                   {videoData.description && videoData.description.length > 120 && (
                     <button
+                      type="button"
                       className="mt-2 text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium"
                       onClick={() => setDescExpanded((v) => !v)}
                     >
