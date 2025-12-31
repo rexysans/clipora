@@ -62,7 +62,7 @@
   height: 12px;
   
   /* This is a Red SVG Checkmark */
-  background-image: url("../assets//checkMark.svg");
+  background-image: url("../../assets/checkMark.svg");
   
   background-size: contain;
   background-repeat: no-repeat;
