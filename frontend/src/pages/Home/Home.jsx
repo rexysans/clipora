@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
 import { API_ENDPOINTS } from "../../config/api";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 
 export default function Home() {
   const [videos, setVideos] = useState([]);
@@ -32,9 +33,20 @@ export default function Home() {
     return count;
   };
 
+  const formatCount = (count) => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count;
+  };
+
+  // Calculate like percentage for like bar
+  const calculateLikePercentage = (likes, dislikes) => {
+    const total = likes + dislikes;
+    if (total === 0) return 0;
+    return Math.round((likes / total) * 100);
+  };
+
   const readyVideos = videos.filter((v) => v.status === "ready");
-
-
 
   if (error) {
     return (
@@ -119,7 +131,7 @@ export default function Home() {
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
                   )}
 
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h3
                       className="
                         text-[15px] font-semibold leading-snug
@@ -136,9 +148,34 @@ export default function Home() {
                       {video.uploader?.name || "Unknown Channel"}
                     </p>
 
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-xs text-neutral-500 mt-0.5">
                       {formatViews(video.views)} views · {formatDate(video.created_at)}
                     </p>
+
+                    {/* Like/Dislike Info */}
+                    {(video.likes > 0 || video.dislikes > 0) && (
+                      <div className="mt-2 space-y-1">
+                        <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                          <FontAwesomeIcon icon={faThumbsUp} className="text-[10px]" />
+                          <span className="font-medium">
+                            {formatCount(video.likes)}
+                          </span>
+                          <span className="text-neutral-400 dark:text-neutral-600">
+                            ({calculateLikePercentage(video.likes, video.dislikes)}%)
+                          </span>
+                        </div>
+                        
+                        {/* Like ratio bar */}
+                        <div className="w-full h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all"
+                            style={{
+                              width: `${calculateLikePercentage(video.likes, video.dislikes)}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </article>

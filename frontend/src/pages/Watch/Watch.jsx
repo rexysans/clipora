@@ -4,6 +4,8 @@ import { useParams, Link } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
 import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../app/AuthContext";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faThumbsUp, faThumbsDown } from "@fortawesome/free-solid-svg-icons";
 
 const VIEW_THRESHOLD = 30; // seconds - minimum watch time to count as a view
 
@@ -31,31 +33,38 @@ function Watch() {
     title: "Loading...",
     description: "",
     views: 0,
+    likes: 0,
+    dislikes: 0,
+    userReaction: null,
   });
   const [error, setError] = useState(null);
-  // Expand/collapse description
   const [descExpanded, setDescExpanded] = useState(false);
-
-  // All videos for recommendations
   const [allVideos, setAllVideos] = useState([]);
 
   useEffect(() => {
     // Fetch current video metadata
     const fetchVideoData = async () => {
       try {
-        const res = await fetch(API_ENDPOINTS.VIDEO_BY_ID(videoId));
+        const url = user 
+          ? `${API_ENDPOINTS.VIDEO_BY_ID(videoId)}?userId=${user.id}`
+          : API_ENDPOINTS.VIDEO_BY_ID(videoId);
+        
+        const res = await fetch(url);
         const data = await res.json();
         setVideoData({
           title: data.title,
           description: data.description || "",
           views: data.views || 0,
+          likes: data.likes || 0,
+          dislikes: data.dislikes || 0,
+          userReaction: data.userReaction || null,
         });
       } catch (err) {
         setError("Failed to load video metadata");
       }
     };
     fetchVideoData();
-  }, [videoId]);
+  }, [videoId, user]);
 
   // Fetch all videos for recommendations
   useEffect(() => {
@@ -69,13 +78,13 @@ function Watch() {
       .catch(() => {});
   }, [videoId]);
 
-  // Pick random recommended videos - memoized to prevent reshuffling on re-renders
+  // Pick random recommended videos
   const recommended = useMemo(() => {
     const shuffled = allVideos.slice().sort(() => 0.5 - Math.random());
     return shuffled.slice(0, 5);
   }, [allVideos]);
 
-  // Format date util (from Home)
+  // Format date util
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const diff = Math.floor((Date.now() - date) / (1000 * 60 * 60 * 24));
@@ -93,7 +102,47 @@ function Watch() {
     return count.toString();
   };
 
-  // Memoize videoPlayerOptions to prevent recreation on re-renders
+  // Format likes/dislikes count
+  const formatCount = (count) => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
+
+  // Handle like/dislike
+  const handleReaction = async (reactionType) => {
+    if (!user) {
+      // Redirect to login if not authenticated
+      window.location.href = "/login";
+      return;
+    }
+
+    try {
+      // If clicking the same reaction, remove it
+      const reaction = videoData.userReaction === reactionType ? 'remove' : reactionType;
+
+      const res = await fetch(API_ENDPOINTS.VIDEO_REACTION(videoId), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reaction }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setVideoData((prev) => ({
+          ...prev,
+          likes: data.likes,
+          dislikes: data.dislikes,
+          userReaction: data.userReaction,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to update reaction:", err);
+    }
+  };
+
+  // Memoize videoPlayerOptions
   const videoPlayerOptions = useMemo(
     () => ({
       controls: true,
@@ -111,15 +160,11 @@ function Watch() {
 
   // Handle view tracking
   const startViewTracking = () => {
-    // Only track if user is logged in
     if (!user) return;
-    
-    // Only start once
     if (viewTimerStarted.current) return;
 
     viewTimerStarted.current = true;
 
-    // Start timer - count view after VIEW_THRESHOLD seconds of continuous playback
     viewTimeoutId.current = setTimeout(() => {
       fetch(API_ENDPOINTS.VIDEO_VIEW(videoId), {
         method: "POST",
@@ -127,10 +172,8 @@ function Watch() {
       })
         .then((res) => {
           if (res.status === 201) {
-            // View counted successfully - update local count
             setVideoData((prev) => ({ ...prev, views: prev.views + 1 }));
           }
-          // 204 means already counted, which is fine
         })
         .catch((err) => {
           console.error("Failed to track view:", err);
@@ -150,7 +193,6 @@ function Watch() {
     playerRef.current = player;
     const userId = getAnonymousUserId();
 
-    // 🔑 Restore progress AFTER metadata loads
     player.one("loadedmetadata", async () => {
       const res = await fetch(
         API_ENDPOINTS.PROGRESS_BY_VIDEO_USER(videoId, userId)
@@ -162,16 +204,13 @@ function Watch() {
       }
     });
 
-    // VIEW TRACKING: Start timer when user plays video
     player.on("play", () => {
       startViewTracking();
     });
 
-    // VIEW TRACKING: Cancel if user pauses before threshold
     player.on("pause", () => {
       cancelViewTracking();
       
-      // Save progress on pause
       fetch(API_ENDPOINTS.PROGRESS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -183,12 +222,10 @@ function Watch() {
       });
     });
 
-    // VIEW TRACKING: Cancel if user seeks
     player.on("seeking", () => {
       cancelViewTracking();
     });
 
-    // Save progress every 5s
     const interval = setInterval(() => {
       if (!player.paused()) {
         fetch(API_ENDPOINTS.PROGRESS, {
@@ -203,14 +240,12 @@ function Watch() {
       }
     }, 5000);
 
-    // Cleanup
     player.on("dispose", () => {
       clearInterval(interval);
       cancelViewTracking();
     });
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       cancelViewTracking();
@@ -239,11 +274,45 @@ function Watch() {
                   <h1 className="text-2xl md:text-3xl font-bold mb-2">
                     {videoData.title}
                   </h1>
-                  <div className="flex items-center gap-4 mb-4 text-sm text-neutral-600 dark:text-neutral-400">
-                    <span className="font-semibold">
-                      {formatViews(videoData.views)} views
-                    </span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
+                      <span className="font-semibold">
+                        {formatViews(videoData.views)} views
+                      </span>
+                    </div>
+
+                    {/* Like/Dislike Buttons */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleReaction('like')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full border transition ${
+                          videoData.userReaction === 'like'
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-700'
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={faThumbsUp} />
+                        <span className="text-sm font-semibold">
+                          {formatCount(videoData.likes)}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => handleReaction('dislike')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full border transition ${
+                          videoData.userReaction === 'dislike'
+                            ? 'bg-red-600 text-white border-red-600'
+                            : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-700'
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={faThumbsDown} />
+                        <span className="text-sm font-semibold">
+                          {formatCount(videoData.dislikes)}
+                        </span>
+                      </button>
+                    </div>
                   </div>
+
                   <div>
                     <p
                       className={`text-gray-700 dark:text-gray-300 text-base md:text-lg whitespace-pre-line ${
@@ -266,6 +335,7 @@ function Watch() {
               )}
             </div>
           </div>
+
           {/* Sidebar: Recommended videos */}
           <div className="w-full md:w-80 flex-shrink-0">
             <div className="bg-neutral-100 dark:bg-[#181818] rounded-xl p-4 shadow-md min-h-[300px]">

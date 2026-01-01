@@ -19,6 +19,8 @@ router.get("/", async (req, res) => {
         v.status, 
         v.created_at, 
         v.views, 
+        v.likes,
+        v.dislikes,
         v.thumbnail_path,
         u.id as uploader_id,
         u.name as uploader_name,
@@ -35,6 +37,8 @@ router.get("/", async (req, res) => {
       status: v.status,
       created_at: v.created_at,
       views: v.views || 0,
+      likes: v.likes || 0,
+      dislikes: v.dislikes || 0,
       thumbnailUrl: v.thumbnail_path
         ? `http://localhost:8080/thumbs/${v.thumbnail_path}`
         : null,
@@ -52,10 +56,12 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get single video by ID with uploader info
+// Get single video by ID with uploader info and user's reaction
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.query.userId; // Optional: pass userId to get their reaction
+    
     const result = await pool.query(`
       SELECT 
         v.id, 
@@ -65,6 +71,8 @@ router.get("/:id", async (req, res) => {
         v.created_at, 
         v.hls_key, 
         v.views, 
+        v.likes,
+        v.dislikes,
         v.thumbnail_path,
         u.id as uploader_id,
         u.name as uploader_name,
@@ -79,6 +87,18 @@ router.get("/:id", async (req, res) => {
     }
 
     const video = result.rows[0];
+
+    // Get user's reaction if userId provided
+    let userReaction = null;
+    if (userId) {
+      const reactionResult = await pool.query(
+        "SELECT reaction_type FROM video_reactions WHERE user_id = $1 AND video_id = $2",
+        [userId, id]
+      );
+      if (reactionResult.rows.length > 0) {
+        userReaction = reactionResult.rows[0].reaction_type;
+      }
+    }
 
     const playbackUrl =
       video.hls_key && video.status === "ready"
@@ -97,7 +117,10 @@ router.get("/:id", async (req, res) => {
       created_at: video.created_at,
       playbackUrl,
       views: video.views || 0,
+      likes: video.likes || 0,
+      dislikes: video.dislikes || 0,
       thumbnailUrl,
+      userReaction,
       uploader: video.uploader_id ? {
         id: video.uploader_id,
         name: video.uploader_name,
@@ -110,24 +133,141 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Like/Dislike video (protected by auth)
+router.post("/:id/reaction", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const videoId = req.params.id;
+  const { reaction } = req.body; // 'like', 'dislike', or 'remove'
+
+  try {
+    // Validate reaction type
+    if (!['like', 'dislike', 'remove'].includes(reaction)) {
+      return res.status(400).json({ error: "Invalid reaction type" });
+    }
+
+    // Check if video exists
+    const videoExists = await pool.query(
+      "SELECT likes, dislikes FROM videos WHERE id = $1",
+      [videoId]
+    );
+
+    if (videoExists.rowCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    // Get current reaction
+    const currentReaction = await pool.query(
+      "SELECT reaction_type FROM video_reactions WHERE user_id = $1 AND video_id = $2",
+      [userId, videoId]
+    );
+
+    const hadReaction = currentReaction.rowCount > 0;
+    const oldReaction = hadReaction ? currentReaction.rows[0].reaction_type : null;
+
+    // Begin transaction
+    await pool.query("BEGIN");
+
+    if (reaction === 'remove') {
+      // Remove reaction
+      if (hadReaction) {
+        await pool.query(
+          "DELETE FROM video_reactions WHERE user_id = $1 AND video_id = $2",
+          [userId, videoId]
+        );
+
+        // Update counts
+        if (oldReaction === 'like') {
+          await pool.query(
+            "UPDATE videos SET likes = GREATEST(likes - 1, 0) WHERE id = $1",
+            [videoId]
+          );
+        } else if (oldReaction === 'dislike') {
+          await pool.query(
+            "UPDATE videos SET dislikes = GREATEST(dislikes - 1, 0) WHERE id = $1",
+            [videoId]
+          );
+        }
+      }
+    } else {
+      // Add or update reaction
+      if (hadReaction) {
+        // Update existing reaction
+        if (oldReaction !== reaction) {
+          await pool.query(
+            "UPDATE video_reactions SET reaction_type = $1 WHERE user_id = $2 AND video_id = $3",
+            [reaction, userId, videoId]
+          );
+
+          // Update counts (remove old, add new)
+          if (oldReaction === 'like') {
+            await pool.query(
+              "UPDATE videos SET likes = GREATEST(likes - 1, 0), dislikes = dislikes + 1 WHERE id = $1",
+              [videoId]
+            );
+          } else {
+            await pool.query(
+              "UPDATE videos SET dislikes = GREATEST(dislikes - 1, 0), likes = likes + 1 WHERE id = $1",
+              [videoId]
+            );
+          }
+        }
+      } else {
+        // Insert new reaction
+        await pool.query(
+          "INSERT INTO video_reactions (user_id, video_id, reaction_type) VALUES ($1, $2, $3)",
+          [userId, videoId, reaction]
+        );
+
+        // Update counts
+        if (reaction === 'like') {
+          await pool.query(
+            "UPDATE videos SET likes = likes + 1 WHERE id = $1",
+            [videoId]
+          );
+        } else {
+          await pool.query(
+            "UPDATE videos SET dislikes = dislikes + 1 WHERE id = $1",
+            [videoId]
+          );
+        }
+      }
+    }
+
+    await pool.query("COMMIT");
+
+    // Get updated counts
+    const updated = await pool.query(
+      "SELECT likes, dislikes FROM videos WHERE id = $1",
+      [videoId]
+    );
+
+    res.json({
+      likes: updated.rows[0].likes,
+      dislikes: updated.rows[0].dislikes,
+      userReaction: reaction === 'remove' ? null : reaction,
+    });
+  } catch (error) {
+    await pool.query("ROLLBACK");
+    console.error("Error updating reaction:", error);
+    res.status(500).json({ error: "Failed to update reaction" });
+  }
+});
+
 // Track video view (protected by auth)
 router.post("/:id/view", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const videoId = req.params.id;
 
   try {
-    // Check if user already viewed this video
     const exists = await pool.query(
       "SELECT 1 FROM video_views WHERE user_id = $1 AND video_id = $2",
       [userId, videoId]
     );
 
-    // If already viewed, do nothing
     if (exists.rowCount > 0) {
-      return res.sendStatus(204); // No Content - already counted
+      return res.sendStatus(204);
     }
 
-    // Check if video exists
     const videoExists = await pool.query(
       "SELECT 1 FROM videos WHERE id = $1",
       [videoId]
@@ -137,16 +277,13 @@ router.post("/:id/view", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Video not found" });
     }
 
-    // Begin transaction for atomic operation
     await pool.query("BEGIN");
 
-    // Record the view
     await pool.query(
       "INSERT INTO video_views (user_id, video_id) VALUES ($1, $2)",
       [userId, videoId]
     );
 
-    // Increment view count
     await pool.query(
       "UPDATE videos SET views = views + 1 WHERE id = $1",
       [videoId]
@@ -154,7 +291,7 @@ router.post("/:id/view", requireAuth, async (req, res) => {
 
     await pool.query("COMMIT");
 
-    res.sendStatus(201); // Created
+    res.sendStatus(201);
   } catch (error) {
     await pool.query("ROLLBACK");
     console.error("Error tracking view:", error);
@@ -167,7 +304,7 @@ router.post("/upload", requireAuth, upload.single("video"), async (req, res) => 
   try {
     const data = req.body;
     const title = data.title;
-    const uploaderId = req.user.id; // Get user ID from auth middleware
+    const uploaderId = req.user.id;
 
     if (!req.file) {
       return res.status(400).json({ error: "Video file is required" });
