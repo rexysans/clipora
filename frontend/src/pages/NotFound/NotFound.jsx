@@ -1,21 +1,11 @@
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import Navbar from "../../components/Navbar/Navbar";
 
 export default function NotFound() {
-  // Initialize theme from localStorage immediately
-  const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem("theme");
-    return saved ? saved === "dark" : true;
-  });
-  
-  // Apply theme whenever it changes
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-  }, [dark]);
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-50 dark:bg-[#0f0f0f] text-neutral-900 dark:text-neutral-100 px-4">
+    <>
+      <Navbar />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-50 dark:bg-[#0f0f0f] text-neutral-900 dark:text-neutral-100 px-4">
       <div className="max-w-2xl w-full flex flex-col items-center text-center">
         {/* Custom 404 SVG Illustration */}
         <svg
@@ -95,6 +85,7 @@ export default function NotFound() {
           Error Code: 404 • Page Not Found
         </p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

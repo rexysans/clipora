@@ -1,22 +1,12 @@
 import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
+import Navbar from "../../components/Navbar/Navbar";
 
 function Watch() {
   const playerRef = useRef(null);
   const { videoId } = useParams();
   const videoLink = `http://localhost:8080/hls/${videoId}/master.m3u8`;
-  // Initialize theme from localStorage immediately
-  const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem("theme");
-    return saved ? saved === "dark" : true;
-  });
-  
-  // Apply theme whenever it changes
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-  }, [dark]);
 
   function getAnonymousUserId() {
     let id = localStorage.getItem("anon_user_id");
@@ -60,7 +50,11 @@ function Watch() {
   useEffect(() => {
     fetch("http://localhost:5000/api/videos")
       .then((res) => res.json())
-      .then((videos) => setAllVideos(videos.filter((v) => v.status === "ready" && v.id !== videoId)))
+      .then((videos) =>
+        setAllVideos(
+          videos.filter((v) => v.status === "ready" && v.id !== videoId)
+        )
+      )
       .catch(() => {});
   }, [videoId]);
 
@@ -82,17 +76,20 @@ function Watch() {
   };
 
   // Memoize videoPlayerOptions to prevent recreation on re-renders
-  const videoPlayerOptions = useMemo(() => ({
-    controls: true,
-    responsive: true,
-    fluid: true,
-    sources: [
-      {
-        src: videoLink,
-        type: "application/x-mpegURL",
-      },
-    ],
-  }), [videoLink]);
+  const videoPlayerOptions = useMemo(
+    () => ({
+      controls: true,
+      responsive: true,
+      fluid: true,
+      sources: [
+        {
+          src: videoLink,
+          type: "application/x-mpegURL",
+        },
+      ],
+    }),
+    [videoLink]
+  );
 
   const handlePlayerReady = async (player) => {
     playerRef.current = player;
@@ -141,66 +138,96 @@ function Watch() {
   };
 
   return (
-    <div className="flex flex-col items-center bg-neutral-50 dark:bg-[#0f0f0f] min-h-screen w-full text-neutral-900 dark:text-neutral-100">
-      <div className="w-full max-w-6xl flex flex-col md:flex-row gap-8 mt-8 px-4">
-        {/* Video Section */}
-        <div className="flex-1 flex flex-col">
-          <div className="rounded-xl overflow-hidden bg-black shadow-lg">
-            <VideoPlayer options={videoPlayerOptions} onReady={handlePlayerReady} />
-          </div>
-          <div className="mt-6 bg-neutral-100 dark:bg-[#181818] rounded-xl p-6 shadow-md">
-            {error ? (
-              <p className="text-red-500 font-semibold">{error}</p>
-            ) : (
-              <>
-                <h1 className="text-2xl md:text-3xl font-bold mb-2">{videoData.title}</h1>
-                <div>
-                  <p className={`text-gray-700 dark:text-gray-300 text-base md:text-lg whitespace-pre-line ${descExpanded ? '' : 'line-clamp-3'}`}>{videoData.description}</p>
-                  {videoData.description && videoData.description.length > 120 && (
-                    <button
-                      type="button"
-                      className="mt-2 text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium"
-                      onClick={() => setDescExpanded((v) => !v)}
+    <>
+      <Navbar />
+
+      <div className="flex flex-col items-center bg-neutral-50 dark:bg-[#0f0f0f] min-h-screen w-full text-neutral-900 dark:text-neutral-100">
+        <div className="w-full max-w-6xl flex flex-col md:flex-row gap-8 mt-8 px-4">
+          {/* Video Section */}
+          <div className="flex-1 flex flex-col">
+            <div className="rounded-xl overflow-hidden bg-black shadow-lg">
+              <VideoPlayer
+                options={videoPlayerOptions}
+                onReady={handlePlayerReady}
+              />
+            </div>
+            <div className="mt-6 bg-neutral-100 dark:bg-[#181818] rounded-xl p-6 shadow-md">
+              {error ? (
+                <p className="text-red-500 font-semibold">{error}</p>
+              ) : (
+                <>
+                  <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                    {videoData.title}
+                  </h1>
+                  <div>
+                    <p
+                      className={`text-gray-700 dark:text-gray-300 text-base md:text-lg whitespace-pre-line ${
+                        descExpanded ? "" : "line-clamp-3"
+                      }`}
                     >
-                      {descExpanded ? 'Show less' : 'Show more'}
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
+                      {videoData.description}
+                    </p>
+                    {videoData.description &&
+                      videoData.description.length > 120 && (
+                        <button
+                          type="button"
+                          className="mt-2 text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium"
+                          onClick={() => setDescExpanded((v) => !v)}
+                        >
+                          {descExpanded ? "Show less" : "Show more"}
+                        </button>
+                      )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-        {/* Sidebar: Recommended videos */}
-        <div className="w-full md:w-80 flex-shrink-0">
-          <div className="bg-neutral-100 dark:bg-[#181818] rounded-xl p-4 shadow-md min-h-[300px]">
-            <h2 className="text-lg font-semibold mb-4 text-neutral-900 dark:text-neutral-100">Recommended</h2>
-            {recommended.length === 0 ? (
-              <span className="text-gray-400 text-base">No recommendations</span>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {recommended.map((video) => (
-                  <Link key={video.id} to={`/watch/${video.id}`} className="flex gap-3 group">
-                    <div className="w-28 h-16 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800 flex-shrink-0">
-                      <img
-                        src={video.thumbnailUrl}
-                        alt={video.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold leading-tight line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{video.title}</h3>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">Channel Name</p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400">0 views · {formatDate(video.created_at)}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+          {/* Sidebar: Recommended videos */}
+          <div className="w-full md:w-80 flex-shrink-0">
+            <div className="bg-neutral-100 dark:bg-[#181818] rounded-xl p-4 shadow-md min-h-[300px]">
+              <h2 className="text-lg font-semibold mb-4 text-neutral-900 dark:text-neutral-100">
+                Recommended
+              </h2>
+              {recommended.length === 0 ? (
+                <span className="text-gray-400 text-base">
+                  No recommendations
+                </span>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {recommended.map((video) => (
+                    <Link
+                      key={video.id}
+                      to={`/watch/${video.id}`}
+                      className="flex gap-3 group"
+                    >
+                      <div className="w-28 h-16 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800 flex-shrink-0">
+                        <img
+                          src={video.thumbnailUrl}
+                          alt={video.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-semibold leading-tight line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {video.title}
+                        </h3>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                          Channel Name
+                        </p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                          0 views · {formatDate(video.created_at)}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

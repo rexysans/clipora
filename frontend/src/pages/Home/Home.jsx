@@ -5,17 +5,6 @@ import Navbar from "../../components/Navbar/Navbar";
 export default function Home() {
   const [videos, setVideos] = useState([]);
   const [error, setError] = useState(null);
-  // Initialize theme from localStorage immediately
-  const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem("theme");
-    return saved ? saved === "dark" : true;
-  });
-
-  // Apply theme whenever it changes
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-  }, [dark]);
 
   // Fetch videos
   useEffect(() => {
@@ -47,7 +36,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans">
-      <Navbar dark={dark} setDark={setDark} />
+      <Navbar />
 
       <main className="max-w-[1200px] mx-auto px-6 py-10">
         {/* Header */}

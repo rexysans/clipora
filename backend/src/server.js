@@ -1,3 +1,4 @@
+import "dotenv/config";   // ← MUST BE FIRST LINE
 import app from "./app.js";
 import pool from "./db.js";
 
