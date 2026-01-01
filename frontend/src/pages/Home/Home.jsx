@@ -26,7 +26,15 @@ export default function Home() {
     return `${Math.floor(diff / 30)} months ago`;
   };
 
+  const formatViews = (count) => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count;
+  };
+
   const readyVideos = videos.filter((v) => v.status === "ready");
+
+
 
   if (error) {
     return (
@@ -74,21 +82,42 @@ export default function Home() {
                     transition
                   "
                 >
-                  <img
-                    src={video.thumbnailUrl}
-                    alt={video.title}
-                    loading="lazy"
-                    className="
-                      w-full h-full object-cover
-                      transition-transform duration-300
-                      group-hover:scale-105
-                    "
-                  />
+                  {video.thumbnailUrl ? (
+                    <img
+                      src={video.thumbnailUrl}
+                      alt={video.title}
+                      loading="lazy"
+                      className="
+                        w-full h-full object-cover
+                        transition-transform duration-300
+                        group-hover:scale-105
+                      "
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-neutral-400 dark:text-neutral-600">
+                      <svg
+                        className="w-16 h-16"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
 
                 {/* Info */}
                 <div className="flex gap-3 mt-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
+                  {/* Uploader Avatar */}
+                  {video.uploader?.avatar ? (
+                    <img
+                      src={video.uploader.avatar}
+                      alt={video.uploader.name}
+                      className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
+                  )}
 
                   <div className="min-w-0">
                     <h3
@@ -104,11 +133,11 @@ export default function Home() {
                     </h3>
 
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                      Channel Name
+                      {video.uploader?.name || "Unknown Channel"}
                     </p>
 
                     <p className="text-xs text-neutral-500">
-                      0 views · {formatDate(video.created_at)}
+                      {formatViews(video.views)} views · {formatDate(video.created_at)}
                     </p>
                   </div>
                 </div>
