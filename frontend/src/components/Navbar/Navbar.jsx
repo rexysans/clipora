@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSun, faMoon, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "../../app/ThemeContext";
@@ -7,6 +7,12 @@ import { useAuth } from "../../app/AuthContext";
 export default function Navbar() {
   const { dark, setDark } = useTheme();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0f0f0f]">
@@ -30,17 +36,32 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           {user && (
-            <button
-              onClick={logout}
-              aria-label="Logout"
-              title="Logout"
-              className="flex items-center justify-center w-9 h-9 rounded-full
-                border border-neutral-300 dark:border-neutral-700
-                text-neutral-700 dark:text-neutral-300
-                hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 transition"
-            >
-              <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" />
-            </button>
+            <>
+              {/* User Profile Section */}
+              <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+                <img
+                  src={user.avatar_url}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-neutral-700"
+                />
+                <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 max-w-[150px] truncate">
+                  {user.name}
+                </span>
+              </div>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                aria-label="Logout"
+                title="Logout"
+                className="flex items-center justify-center w-9 h-9 rounded-full
+                  border border-neutral-300 dark:border-neutral-700
+                  text-neutral-700 dark:text-neutral-300
+                  hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 transition"
+              >
+                <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" />
+              </button>
+            </>
           )}
           
           <button
