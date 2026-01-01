@@ -9,6 +9,8 @@ export const API_ENDPOINTS = {
   VIDEO_BY_ID: (id) => `${API_BASE_URL}/videos/${id}`,
   VIDEO_VIEW: (id) => `${API_BASE_URL}/videos/${id}/view`,
   VIDEO_REACTION: (id) => `${API_BASE_URL}/videos/${id}/reaction`,
+  VIDEO_COMMENTS: (id) => `${API_BASE_URL}/videos/${id}/comments`,
+  COMMENT_BY_ID: (videoId, commentId) => `${API_BASE_URL}/videos/${videoId}/comments/${commentId}`,
   PROGRESS_BY_VIDEO_USER: (videoId, userId) => `${API_BASE_URL}/progress/${videoId}/${userId}`,
   PROGRESS: `${API_BASE_URL}/progress`,
 };

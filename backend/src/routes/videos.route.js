@@ -73,6 +73,7 @@ router.get("/:id", async (req, res) => {
         v.views, 
         v.likes,
         v.dislikes,
+        v.comment_count,
         v.thumbnail_path,
         u.id as uploader_id,
         u.name as uploader_name,
@@ -119,6 +120,7 @@ router.get("/:id", async (req, res) => {
       views: video.views || 0,
       likes: video.likes || 0,
       dislikes: video.dislikes || 0,
+      commentCount: video.comment_count || 0,
       thumbnailUrl,
       userReaction,
       uploader: video.uploader_id ? {
@@ -335,6 +337,220 @@ router.post("/upload", requireAuth, upload.single("video"), async (req, res) => 
     res.status(500).json({
       error: "Upload failed",
     });
+  }
+});
+
+// Get comments for a video
+router.get("/:id/comments", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get all comments with user info
+    const result = await pool.query(`
+      SELECT 
+        c.id,
+        c.video_id,
+        c.user_id,
+        c.parent_comment_id,
+        c.content,
+        c.created_at,
+        c.updated_at,
+        u.name as user_name,
+        u.avatar_url as user_avatar,
+        COUNT(replies.id) as reply_count
+      FROM comments c
+      LEFT JOIN users u ON c.user_id = u.id
+      LEFT JOIN comments replies ON replies.parent_comment_id = c.id
+      WHERE c.video_id = $1
+      GROUP BY c.id, u.name, u.avatar_url
+      ORDER BY c.created_at DESC
+    `, [id]);
+
+    // Organize comments into tree structure
+    const comments = result.rows.filter(c => !c.parent_comment_id).map(comment => ({
+      id: comment.id,
+      videoId: comment.video_id,
+      userId: comment.user_id,
+      content: comment.content,
+      createdAt: comment.created_at,
+      updatedAt: comment.updated_at,
+      user: {
+        name: comment.user_name,
+        avatar: comment.user_avatar,
+      },
+      replyCount: parseInt(comment.reply_count),
+      replies: result.rows
+        .filter(r => r.parent_comment_id === comment.id)
+        .map(reply => ({
+          id: reply.id,
+          videoId: reply.video_id,
+          userId: reply.user_id,
+          parentCommentId: reply.parent_comment_id,
+          content: reply.content,
+          createdAt: reply.created_at,
+          updatedAt: reply.updated_at,
+          user: {
+            name: reply.user_name,
+            avatar: reply.user_avatar,
+          },
+        }))
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)),
+    }));
+
+    res.json(comments);
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    res.status(500).json({ error: "Failed to fetch comments" });
+  }
+});
+
+// Post a comment
+router.post("/:id/comments", requireAuth, async (req, res) => {
+  try {
+    const videoId = req.params.id;
+    const userId = req.user.id;
+    const { content, parentCommentId } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: "Comment content is required" });
+    }
+
+    if (content.length > 5000) {
+      return res.status(400).json({ error: "Comment too long (max 5000 characters)" });
+    }
+
+    // Check if video exists
+    const videoExists = await pool.query(
+      "SELECT 1 FROM videos WHERE id = $1",
+      [videoId]
+    );
+
+    if (videoExists.rowCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    // If it's a reply, check if parent comment exists
+    if (parentCommentId) {
+      const parentExists = await pool.query(
+        "SELECT 1 FROM comments WHERE id = $1 AND video_id = $2",
+        [parentCommentId, videoId]
+      );
+
+      if (parentExists.rowCount === 0) {
+        return res.status(404).json({ error: "Parent comment not found" });
+      }
+    }
+
+    // Insert comment
+    const result = await pool.query(`
+      INSERT INTO comments (video_id, user_id, parent_comment_id, content)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, video_id, user_id, parent_comment_id, content, created_at, updated_at
+    `, [videoId, userId, parentCommentId || null, content.trim()]);
+
+    // Get user info
+    const userInfo = await pool.query(
+      "SELECT name, avatar_url FROM users WHERE id = $1",
+      [userId]
+    );
+
+    const comment = result.rows[0];
+    res.status(201).json({
+      id: comment.id,
+      videoId: comment.video_id,
+      userId: comment.user_id,
+      parentCommentId: comment.parent_comment_id,
+      content: comment.content,
+      createdAt: comment.created_at,
+      updatedAt: comment.updated_at,
+      user: {
+        name: userInfo.rows[0].name,
+        avatar: userInfo.rows[0].avatar_url,
+      },
+      replyCount: 0,
+      replies: [],
+    });
+  } catch (error) {
+    console.error("Error posting comment:", error);
+    res.status(500).json({ error: "Failed to post comment" });
+  }
+});
+
+// Delete a comment
+router.delete("/:id/comments/:commentId", requireAuth, async (req, res) => {
+  try {
+    const { id: videoId, commentId } = req.params;
+    const userId = req.user.id;
+
+    // Check if comment exists and belongs to user
+    const comment = await pool.query(
+      "SELECT user_id FROM comments WHERE id = $1 AND video_id = $2",
+      [commentId, videoId]
+    );
+
+    if (comment.rowCount === 0) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    if (comment.rows[0].user_id !== userId) {
+      return res.status(403).json({ error: "Not authorized to delete this comment" });
+    }
+
+    // Delete comment (cascade will delete replies)
+    await pool.query("DELETE FROM comments WHERE id = $1", [commentId]);
+
+    res.sendStatus(204);
+  } catch (error) {
+    console.error("Error deleting comment:", error);
+    res.status(500).json({ error: "Failed to delete comment" });
+  }
+});
+
+// Update a comment
+router.put("/:id/comments/:commentId", requireAuth, async (req, res) => {
+  try {
+    const { id: videoId, commentId } = req.params;
+    const userId = req.user.id;
+    const { content } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: "Comment content is required" });
+    }
+
+    if (content.length > 5000) {
+      return res.status(400).json({ error: "Comment too long (max 5000 characters)" });
+    }
+
+    // Check if comment exists and belongs to user
+    const comment = await pool.query(
+      "SELECT user_id FROM comments WHERE id = $1 AND video_id = $2",
+      [commentId, videoId]
+    );
+
+    if (comment.rowCount === 0) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    if (comment.rows[0].user_id !== userId) {
+      return res.status(403).json({ error: "Not authorized to edit this comment" });
+    }
+
+    // Update comment
+    const result = await pool.query(`
+      UPDATE comments 
+      SET content = $1, updated_at = now()
+      WHERE id = $2
+      RETURNING id, content, updated_at
+    `, [content.trim(), commentId]);
+
+    res.json({
+      id: result.rows[0].id,
+      content: result.rows[0].content,
+      updatedAt: result.rows[0].updated_at,
+    });
+  } catch (error) {
+    console.error("Error updating comment:", error);
+    res.status(500).json({ error: "Failed to update comment" });
   }
 });
 
