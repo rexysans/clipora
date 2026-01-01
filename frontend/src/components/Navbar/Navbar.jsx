@@ -1,3 +1,4 @@
+// frontend/src/components/Navbar/Navbar.jsx
 import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSun, faMoon, faRightFromBracket, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
@@ -47,8 +48,11 @@ export default function Navbar() {
                 <span className="hidden sm:inline">Upload</span>
               </Link>
 
-              {/* User Profile Section */}
-              <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+              {/* User Profile Section - Now Clickable */}
+              <Link
+                to={`/channel/${user.id}`}
+                className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
                 <img
                   src={user.avatar_url}
                   alt={user.name}
@@ -57,7 +61,7 @@ export default function Navbar() {
                 <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 max-w-[150px] truncate">
                   {user.name}
                 </span>
-              </div>
+              </Link>
 
               {/* Logout Button */}
               <button

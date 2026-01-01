@@ -1,4 +1,4 @@
-// src/app/routes.jsx
+// frontend/src/app/routes.jsx
 import { createBrowserRouter } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import Loader from '../components/UI/Loader';
@@ -8,6 +8,7 @@ import ProtectedRoute from '../components/ProtectedRoute';
 const Home = lazy(() => import('../pages/Home/Home'));
 const Watch = lazy(() => import('../pages/Watch/Watch'));
 const Upload = lazy(() => import('../pages/Upload/Upload'));
+const Channel = lazy(() => import('../pages/Channel/Channel'));  // NEW
 const Login = lazy(() => import('../pages/Login/Login'));
 const Signup = lazy(() => import('../pages/Signup/Signup'));
 const NotFound = lazy(() => import('../pages/NotFound/NotFound'));
@@ -51,6 +52,17 @@ export const router = createBrowserRouter([
       <Suspense fallback={<LoadingFallback />}>
         <ProtectedRoute>
           <Upload />
+        </ProtectedRoute>
+      </Suspense>
+    ),
+    errorElement: <ErrorElement />
+  },
+  {
+    path: '/channel/:userId',  // NEW
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <ProtectedRoute>
+          <Channel />
         </ProtectedRoute>
       </Suspense>
     ),

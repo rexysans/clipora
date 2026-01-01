@@ -56,6 +56,80 @@ router.get("/", async (req, res) => {
   }
 });
 
+
+// Add this to backend/src/routes/videos.route.js
+// After the GET "/" route, add this new route:
+
+// Get videos by user ID
+router.get("/user/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // First get user info
+    const userResult = await pool.query(
+      "SELECT id, name, avatar_url FROM users WHERE id = $1",
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Get videos by this user
+    const videosResult = await pool.query(`
+      SELECT 
+        v.id, 
+        v.title, 
+        v.description, 
+        v.status, 
+        v.created_at, 
+        v.views, 
+        v.likes,
+        v.dislikes,
+        v.comment_count,
+        v.thumbnail_path
+      FROM videos v
+      WHERE v.uploader_id = $1
+      ORDER BY v.created_at DESC
+    `, [userId]);
+    
+    const videos = videosResult.rows.map((v) => ({
+      id: v.id,
+      title: v.title,
+      description: v.description,
+      status: v.status,
+      created_at: v.created_at,
+      views: v.views || 0,
+      likes: v.likes || 0,
+      dislikes: v.dislikes || 0,
+      commentCount: v.comment_count || 0,
+      thumbnailUrl: v.thumbnail_path
+        ? `http://localhost:8080/thumbs/${v.thumbnail_path}`
+        : null,
+    }));
+    
+    res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar_url,
+      },
+      videos,
+    });
+  } catch (error) {
+    console.error("Error fetching user videos:", error);
+    res.status(500).json({ error: "Failed to fetch user videos" });
+  }
+});
+
+
+
+
+
+
+
 // Get single video by ID with uploader info and user's reaction
 router.get("/:id", async (req, res) => {
   try {
@@ -505,6 +579,102 @@ router.delete("/:id/comments/:commentId", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to delete comment" });
   }
 });
+
+// Add these routes to backend/src/routes/videos.route.js
+// Add after the upload route
+
+// Update video (only owner can update)
+router.put("/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { title, description } = req.body;
+
+    // Validate input
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+
+    if (title.length > 200) {
+      return res.status(400).json({ error: "Title too long (max 200 characters)" });
+    }
+
+    if (description && description.length > 5000) {
+      return res.status(400).json({ error: "Description too long (max 5000 characters)" });
+    }
+
+    // Check if video exists and user is the owner
+    const videoCheck = await pool.query(
+      "SELECT uploader_id FROM videos WHERE id = $1",
+      [id]
+    );
+
+    if (videoCheck.rowCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    if (videoCheck.rows[0].uploader_id !== userId) {
+      return res.status(403).json({ error: "Not authorized to edit this video" });
+    }
+
+    // Update video
+    const result = await pool.query(
+      `UPDATE videos 
+       SET title = $1, description = $2, updated_at = now()
+       WHERE id = $3
+       RETURNING id, title, description, updated_at`,
+      [title.trim(), description?.trim() || null, id]
+    );
+
+    res.json({
+      id: result.rows[0].id,
+      title: result.rows[0].title,
+      description: result.rows[0].description,
+      updatedAt: result.rows[0].updated_at,
+    });
+  } catch (error) {
+    console.error("Error updating video:", error);
+    res.status(500).json({ error: "Failed to update video" });
+  }
+});
+
+// Delete video (only owner can delete)
+router.delete("/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Check if video exists and user is the owner
+    const videoCheck = await pool.query(
+      "SELECT uploader_id, hls_key FROM videos WHERE id = $1",
+      [id]
+    );
+
+    if (videoCheck.rowCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    if (videoCheck.rows[0].uploader_id !== userId) {
+      return res.status(403).json({ error: "Not authorized to delete this video" });
+    }
+
+    // Delete video (cascade will delete related records)
+    await pool.query("DELETE FROM videos WHERE id = $1", [id]);
+
+    // Note: You might want to also delete the video files from storage here
+    // const hlsKey = videoCheck.rows[0].hls_key;
+    // Delete files from videos/hls/{hlsKey}/ and backend/uploads/raw/
+
+    res.json({ message: "Video deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    res.status(500).json({ error: "Failed to delete video" });
+  }
+});
+
+
+
+
 
 // Update a comment
 router.put("/:id/comments/:commentId", requireAuth, async (req, res) => {

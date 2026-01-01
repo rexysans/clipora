@@ -83,9 +83,9 @@ export default function Home() {
           "
         >
           {readyVideos.map((video) => (
-            <Link key={video.id} to={`/watch/${video.id}`} className="group">
-              <article>
-                {/* Thumbnail */}
+            <article key={video.id}>
+              {/* Thumbnail - Link to video */}
+              <Link to={`/watch/${video.id}`} className="group block">
                 <div
                   className="
                     relative aspect-video rounded-xl overflow-hidden
@@ -117,21 +117,29 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+              </Link>
 
-                {/* Info */}
-                <div className="flex gap-3 mt-3">
-                  {/* Uploader Avatar */}
-                  {video.uploader?.avatar ? (
+              {/* Info */}
+              <div className="flex gap-3 mt-3">
+                {/* Uploader Avatar - Link to channel */}
+                {video.uploader?.avatar ? (
+                  <Link
+                    to={`/channel/${video.uploader.id}`}
+                    className="flex-shrink-0"
+                  >
                     <img
                       src={video.uploader.avatar}
                       alt={video.uploader.name}
-                      className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                      className="w-9 h-9 rounded-full object-cover hover:ring-2 hover:ring-indigo-500 transition"
                     />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
-                  )}
+                  </Link>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
+                )}
 
-                  <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1">
+                  {/* Video Title - Link to video */}
+                  <Link to={`/watch/${video.id}`} className="group">
                     <h3
                       className="
                         text-[15px] font-semibold leading-snug
@@ -143,43 +151,47 @@ export default function Home() {
                     >
                       {video.title}
                     </h3>
+                  </Link>
 
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                      {video.uploader?.name || "Unknown Channel"}
-                    </p>
+                  {/* Channel Name - Link to channel */}
+                  <Link
+                    to={`/channel/${video.uploader?.id}`}
+                    className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors inline-block mt-0.5"
+                  >
+                    {video.uploader?.name || "Unknown Channel"}
+                  </Link>
 
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {formatViews(video.views)} views · {formatDate(video.created_at)}
-                    </p>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    {formatViews(video.views)} views · {formatDate(video.created_at)}
+                  </p>
 
-                    {/* Like/Dislike Info */}
-                    {(video.likes > 0 || video.dislikes > 0) && (
-                      <div className="mt-2 space-y-1">
-                        <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
-                          <FontAwesomeIcon icon={faThumbsUp} className="text-[10px]" />
-                          <span className="font-medium">
-                            {formatCount(video.likes)}
-                          </span>
-                          <span className="text-neutral-400 dark:text-neutral-600">
-                            ({calculateLikePercentage(video.likes, video.dislikes)}%)
-                          </span>
-                        </div>
-                        
-                        {/* Like ratio bar */}
-                        <div className="w-full h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all"
-                            style={{
-                              width: `${calculateLikePercentage(video.likes, video.dislikes)}%`,
-                            }}
-                          />
-                        </div>
+                  {/* Like/Dislike Info */}
+                  {(video.likes > 0 || video.dislikes > 0) && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                        <FontAwesomeIcon icon={faThumbsUp} className="text-[10px]" />
+                        <span className="font-medium">
+                          {formatCount(video.likes)}
+                        </span>
+                        <span className="text-neutral-400 dark:text-neutral-600">
+                          ({calculateLikePercentage(video.likes, video.dislikes)}%)
+                        </span>
                       </div>
-                    )}
-                  </div>
+                      
+                      {/* Like ratio bar */}
+                      <div className="w-full h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all"
+                          style={{
+                            width: `${calculateLikePercentage(video.likes, video.dislikes)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </article>
-            </Link>
+              </div>
+            </article>
           ))}
         </div>
 

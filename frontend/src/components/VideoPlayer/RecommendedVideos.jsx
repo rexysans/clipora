@@ -56,6 +56,7 @@ export default function RecommendedVideos({ videos, currentVideoId }) {
                   to={`/watch/${video.id}`}
                   className="flex gap-3 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg p-2 transition"
                 >
+                  {/* Thumbnail */}
                   <div className="w-52 h-32 bg-neutral-300 dark:bg-neutral-700 rounded-lg overflow-hidden flex-shrink-0">
                     {video.thumbnailUrl ? (
                       <img
@@ -75,27 +76,45 @@ export default function RecommendedVideos({ videos, currentVideoId }) {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Video Info */}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm line-clamp-2 text-neutral-900 dark:text-neutral-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                       {video.title}
                     </h3>
+                    
+                    {/* Channel Info - Clickable */}
                     <div className="flex items-center gap-2 mt-2">
-                      {/* Channel Avatar */}
+                      {/* Channel Avatar - Link to channel */}
                       {video.uploader?.avatar ? (
-                        <img
-                          src={video.uploader.avatar}
-                          alt={video.uploader.name}
-                          className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                        />
+                        <Link
+                          to={`/channel/${video.uploader.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-shrink-0"
+                        >
+                          <img
+                            src={video.uploader.avatar}
+                            alt={video.uploader.name}
+                            className="w-6 h-6 rounded-full object-cover hover:ring-2 hover:ring-indigo-500 transition"
+                          />
+                        </Link>
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
                       )}
+                      
+                      {/* Channel Name - Link to channel */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                        <Link
+                          to={`/channel/${video.uploader?.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors inline-block truncate"
+                        >
                           {video.uploader?.name || "Unknown"}
-                        </p>
+                        </Link>
                       </div>
                     </div>
+                    
+                    {/* Views and Likes */}
                     <div className="flex items-center gap-2 mt-1 text-xs text-neutral-500 dark:text-neutral-500">
                       <span>{formatViews(video.views)} views</span>
                       <span className="text-neutral-400 dark:text-neutral-600">•</span>

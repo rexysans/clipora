@@ -1,6 +1,6 @@
 import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import { useRef, useState, useEffect, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
 import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../app/AuthContext";
@@ -8,15 +8,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faThumbsUp,
   faThumbsDown,
-  faComment,
-  faReply,
   faEdit,
   faTrash,
-  faPaperPlane,
-  faChevronDown,
-  faChevronUp,
+  faEllipsisV,
 } from "@fortawesome/free-solid-svg-icons";
 import ConfirmModal from "../../components/UI/ConfirmModal";
+import VideoEditModal from "../../components/UI/VideoEditModal";
 import RecommendedVideos from "../../components/VideoPlayer/RecommendedVideos";
 import CommentSection from "../../components/Comments/CommentSection";
 
@@ -25,6 +22,7 @@ const VIEW_THRESHOLD = 20;
 function Watch() {
   const playerRef = useRef(null);
   const { videoId } = useParams();
+  const navigate = useNavigate();
   const videoLink = `http://localhost:8080/hls/${videoId}/master.m3u8`;
   const { user } = useAuth();
 
@@ -48,10 +46,16 @@ function Watch() {
     dislikes: 0,
     commentCount: 0,
     userReaction: null,
+    uploader: null,
   });
   const [error, setError] = useState(null);
   const [descExpanded, setDescExpanded] = useState(false);
   const [allVideos, setAllVideos] = useState([]);
+
+  // Video menu state
+  const [showVideoMenu, setShowVideoMenu] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteVideoModal, setDeleteVideoModal] = useState(false);
 
   // Comments state
   const [comments, setComments] = useState([]);
@@ -72,6 +76,9 @@ function Watch() {
     parentId: null,
   });
 
+  // Check if current user owns the video
+  const isOwner = user && videoData.uploader && user.id === videoData.uploader.id;
+
   useEffect(() => {
     const fetchVideoData = async () => {
       try {
@@ -89,6 +96,7 @@ function Watch() {
           dislikes: data.dislikes || 0,
           commentCount: data.commentCount || 0,
           userReaction: data.userReaction || null,
+          uploader: data.uploader || null,
         });
       } catch (err) {
         setError("Failed to load video metadata");
@@ -127,7 +135,6 @@ function Watch() {
 
   // Pick recommended videos - use stable sort with date
   const recommended = useMemo(() => {
-    // Sort by created_at consistently instead of random
     return allVideos
       .slice()
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -213,6 +220,53 @@ function Watch() {
     }
   };
 
+  // Edit video
+  const handleEditVideo = async (updatedData) => {
+    try {
+      const res = await fetch(API_ENDPOINTS.VIDEO_UPDATE(videoId), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(updatedData),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to update video");
+      }
+
+      const data = await res.json();
+      setVideoData((prev) => ({
+        ...prev,
+        title: data.title,
+        description: data.description,
+      }));
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  // Delete video
+  const handleDeleteVideo = async () => {
+    try {
+      const res = await fetch(API_ENDPOINTS.VIDEO_DELETE(videoId), {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to delete video");
+      }
+
+      // Redirect to home after deletion
+      navigate("/");
+    } catch (err) {
+      console.error("Failed to delete video:", err);
+      alert(err.message || "Failed to delete video");
+    }
+  };
+
   // Post comment
   const handlePostComment = async () => {
     if (!user) {
@@ -248,13 +302,11 @@ function Watch() {
   };
 
   // Post reply
-  const handlePostReply = async (parentId) => {
+  const handlePostReply = async (parentCommentId, content) => {
     if (!user) {
       window.location.href = "/login";
       return;
     }
-
-    if (!replyText.trim()) return;
 
     try {
       const res = await fetch(API_ENDPOINTS.VIDEO_COMMENTS(videoId), {
@@ -262,41 +314,86 @@ function Watch() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          content: replyText,
-          parentCommentId: parentId,
+          content,
+          parentCommentId,
         }),
       });
 
       if (res.ok) {
         const newReply = await res.json();
-        setComments(
-          comments.map((c) => {
-            if (c.id === parentId) {
+
+        setComments((prevComments) => {
+          return prevComments.map((comment) => {
+            if (comment.id === parentCommentId) {
               return {
-                ...c,
-                replies: [...c.replies, newReply],
-                replyCount: c.replyCount + 1,
+                ...comment,
+                replies: [...(comment.replies || []), newReply],
+                reply_count: (comment.reply_count || 0) + 1,
               };
             }
-            return c;
-          })
-        );
-        setReplyText("");
-        setReplyingTo(null);
+            return comment;
+          });
+        });
+
         setVideoData((prev) => ({
           ...prev,
           commentCount: prev.commentCount + 1,
         }));
-        // Auto-expand replies when user posts a reply
-        setExpandedReplies((prev) => new Set(prev).add(parentId));
       }
     } catch (err) {
       console.error("Failed to post reply:", err);
     }
   };
 
-  // Open delete modal
-  const openDeleteModal = (commentId, isReply = false, parentId = null) => {
+  // Edit comment
+  const handleEditComment = async (commentId, newContent, isReply, parentId) => {
+    if (!user) return;
+
+    try {
+      const res = await fetch(
+        API_ENDPOINTS.COMMENT_BY_ID(videoId, commentId),
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ content: newContent }),
+        }
+      );
+
+      if (res.ok) {
+        const updatedComment = await res.json();
+
+        if (isReply && parentId) {
+          setComments((prevComments) =>
+            prevComments.map((comment) => {
+              if (comment.id === parentId) {
+                return {
+                  ...comment,
+                  replies: comment.replies.map((reply) =>
+                    reply.id === commentId ? updatedComment : reply
+                  ),
+                };
+              }
+              return comment;
+            })
+          );
+        } else {
+          setComments((prevComments) =>
+            prevComments.map((comment) =>
+              comment.id === commentId
+                ? { ...comment, ...updatedComment }
+                : comment
+            )
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to edit comment:", err);
+    }
+  };
+
+  // Delete comment
+  const openDeleteModal = (commentId, isReply, parentId) => {
     setDeleteModal({
       isOpen: true,
       commentId,
@@ -305,97 +402,50 @@ function Watch() {
     });
   };
 
-  // Delete comment
   const handleDeleteComment = async () => {
     const { commentId, isReply, parentId } = deleteModal;
+    if (!user || !commentId) return;
 
     try {
-      const res = await fetch(API_ENDPOINTS.COMMENT_BY_ID(videoId, commentId), {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        API_ENDPOINTS.COMMENT_BY_ID(videoId, commentId),
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
 
       if (res.ok) {
-        if (isReply) {
-          setComments(
-            comments.map((c) => {
-              if (c.id === parentId) {
+        const data = await res.json();
+
+        if (isReply && parentId) {
+          setComments((prevComments) =>
+            prevComments.map((comment) => {
+              if (comment.id === parentId) {
                 return {
-                  ...c,
-                  replies: c.replies.filter((r) => r.id !== commentId),
-                  replyCount: c.replyCount - 1,
+                  ...comment,
+                  replies: comment.replies.filter((r) => r.id !== commentId),
+                  reply_count: Math.max(0, (comment.reply_count || 1) - 1),
                 };
               }
-              return c;
+              return comment;
             })
           );
         } else {
-          const deletedComment = comments.find((c) => c.id === commentId);
-          const totalDeleted = 1 + (deletedComment?.replyCount || 0);
-          setComments(comments.filter((c) => c.id !== commentId));
-          setVideoData((prev) => ({
-            ...prev,
-            commentCount: prev.commentCount - totalDeleted,
-          }));
+          setComments((prevComments) =>
+            prevComments.filter((c) => c.id !== commentId)
+          );
         }
+
+        setVideoData((prev) => ({
+          ...prev,
+          commentCount: Math.max(0, prev.commentCount - data.deletedCount),
+        }));
       }
     } catch (err) {
       console.error("Failed to delete comment:", err);
-    }
-  };
-
-  // Edit comment
-  const handleEditComment = async (commentId, isReply, parentId) => {
-    if (!editText.trim()) return;
-
-    try {
-      const res = await fetch(API_ENDPOINTS.COMMENT_BY_ID(videoId, commentId), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ content: editText }),
-      });
-
-      if (res.ok) {
-        const updated = await res.json();
-        if (isReply) {
-          setComments(
-            comments.map((c) => {
-              if (c.id === parentId) {
-                return {
-                  ...c,
-                  replies: c.replies.map((r) =>
-                    r.id === commentId
-                      ? {
-                          ...r,
-                          content: updated.content,
-                          updatedAt: updated.updatedAt,
-                        }
-                      : r
-                  ),
-                };
-              }
-              return c;
-            })
-          );
-        } else {
-          setComments(
-            comments.map((c) =>
-              c.id === commentId
-                ? {
-                    ...c,
-                    content: updated.content,
-                    updatedAt: updated.updatedAt,
-                  }
-                : c
-            )
-          );
-        }
-        setEditingComment(null);
-        setEditText("");
-      }
-    } catch (err) {
-      console.error("Failed to edit comment:", err);
+    } finally {
+      setDeleteModal({ isOpen: false, commentId: null, isReply: false, parentId: null });
     }
   };
 
@@ -448,55 +498,50 @@ function Watch() {
     playerRef.current = player;
     const userId = getAnonymousUserId();
 
-    player.one("loadedmetadata", async () => {
+    try {
       const res = await fetch(
         API_ENDPOINTS.PROGRESS_BY_VIDEO_USER(videoId, userId)
       );
-      const data = await res.json();
-
-      if (data.lastTime > 0) {
-        player.currentTime(data.lastTime);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.progress_seconds > 0) {
+          player.currentTime(data.progress_seconds);
+        }
       }
-    });
+    } catch (err) {
+      console.error("Failed to restore progress:", err);
+    }
+
+    let progressInterval;
 
     player.on("play", () => {
       startViewTracking();
+
+      progressInterval = setInterval(() => {
+        const currentTime = player.currentTime();
+        fetch(API_ENDPOINTS.PROGRESS, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            videoId,
+            userId,
+            progressSeconds: currentTime,
+          }),
+        }).catch(() => {});
+      }, 5000);
     });
 
     player.on("pause", () => {
       cancelViewTracking();
-
-      fetch(API_ENDPOINTS.PROGRESS, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          videoId,
-          lastTime: player.currentTime(),
-        }),
-      });
+      clearInterval(progressInterval);
     });
 
     player.on("seeking", () => {
       cancelViewTracking();
     });
 
-    const interval = setInterval(() => {
-      if (!player.paused()) {
-        fetch(API_ENDPOINTS.PROGRESS, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId,
-            videoId,
-            lastTime: player.currentTime(),
-          }),
-        });
-      }
-    }, 5000);
-
     player.on("dispose", () => {
-      clearInterval(interval);
+      clearInterval(progressInterval);
       cancelViewTracking();
     });
   };
@@ -511,13 +556,30 @@ function Watch() {
     <>
       <Navbar />
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Comment Modal */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
         onConfirm={handleDeleteComment}
         title="Delete Comment"
         message="Are you sure you want to delete this comment? This action cannot be undone."
+      />
+
+      {/* Delete Video Modal */}
+      <ConfirmModal
+        isOpen={deleteVideoModal}
+        onClose={() => setDeleteVideoModal(false)}
+        onConfirm={handleDeleteVideo}
+        title="Delete Video"
+        message="Are you sure you want to delete this video? This action cannot be undone and will remove all comments and reactions."
+      />
+
+      {/* Edit Video Modal */}
+      <VideoEditModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSave={handleEditVideo}
+        video={videoData}
       />
 
       <div className="flex flex-col items-center bg-neutral-50 dark:bg-[#0f0f0f] min-h-screen w-full text-neutral-900 dark:text-neutral-100">
@@ -537,9 +599,53 @@ function Watch() {
                 <p className="text-red-500 font-semibold">{error}</p>
               ) : (
                 <>
-                  <h1 className="text-2xl md:text-3xl font-bold mb-2">
-                    {videoData.title}
-                  </h1>
+                  {/* Title and Menu */}
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <h1 className="text-2xl md:text-3xl font-bold flex-1">
+                      {videoData.title}
+                    </h1>
+                    
+                    {/* Owner Actions */}
+                    {isOwner && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowVideoMenu(!showVideoMenu)}
+                          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition"
+                        >
+                          <FontAwesomeIcon
+                            icon={faEllipsisV}
+                            className="text-neutral-600 dark:text-neutral-400"
+                          />
+                        </button>
+
+                        {showVideoMenu && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 py-2 z-10">
+                            <button
+                              onClick={() => {
+                                setEditModalOpen(true);
+                                setShowVideoMenu(false);
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-3 text-neutral-900 dark:text-neutral-100"
+                            >
+                              <FontAwesomeIcon icon={faEdit} className="text-sm" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setDeleteVideoModal(true);
+                                setShowVideoMenu(false);
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-red-600 dark:text-red-400"
+                            >
+                              <FontAwesomeIcon icon={faTrash} className="text-sm" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
                       <span className="font-semibold">
@@ -578,6 +684,28 @@ function Watch() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Uploader Info - Clickable */}
+                  {videoData.uploader && (
+                    <Link
+                      to={`/channel/${videoData.uploader.id}`}
+                      className="flex items-center gap-3 mb-4 hover:bg-neutral-200 dark:hover:bg-neutral-700 p-3 rounded-lg transition-colors -ml-3"
+                    >
+                      <img
+                        src={videoData.uploader.avatar}
+                        alt={videoData.uploader.name}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="font-semibold text-base">
+                          {videoData.uploader.name}
+                        </p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                          Channel
+                        </p>
+                      </div>
+                    </Link>
+                  )}
 
                   <div>
                     <p

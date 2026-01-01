@@ -1,3 +1,4 @@
+// frontend/src/config/api.js
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export const API_ENDPOINTS = {
@@ -7,6 +8,9 @@ export const API_ENDPOINTS = {
   VIDEOS: `${API_BASE_URL}/videos`,
   VIDEOS_UPLOAD: `${API_BASE_URL}/videos/upload`,
   VIDEO_BY_ID: (id) => `${API_BASE_URL}/videos/${id}`,
+  VIDEO_UPDATE: (id) => `${API_BASE_URL}/videos/${id}`,  // NEW
+  VIDEO_DELETE: (id) => `${API_BASE_URL}/videos/${id}`,  // NEW
+  VIDEOS_BY_USER: (userId) => `${API_BASE_URL}/videos/user/${userId}`,
   VIDEO_VIEW: (id) => `${API_BASE_URL}/videos/${id}/view`,
   VIDEO_REACTION: (id) => `${API_BASE_URL}/videos/${id}/reaction`,
   VIDEO_COMMENTS: (id) => `${API_BASE_URL}/videos/${id}/comments`,
