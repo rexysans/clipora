@@ -2,8 +2,7 @@ import { Link, Navigate } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
 import { useAuth } from "../../app/AuthContext";
 import Loader from "../../components/UI/Loader";
-
-const GOOGLE_AUTH_URL = "http://localhost:5000/auth/google";
+import { API_ENDPOINTS } from "../../config/api";
 
 export default function Login() {
   const { user, loading } = useAuth();
@@ -41,7 +40,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => {
-                window.location.href = GOOGLE_AUTH_URL;
+                window.location.href = API_ENDPOINTS.AUTH_GOOGLE;
               }}
               className="w-full px-6 py-4 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-2 border-neutral-300 dark:border-neutral-600 rounded-lg transition-all duration-200 font-semibold text-neutral-900 dark:text-neutral-100 flex items-center justify-center gap-3 shadow-sm hover:shadow-md"
             >

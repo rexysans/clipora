@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
+import { API_ENDPOINTS } from "../../config/api";
+
 
 export default function Home() {
   const [videos, setVideos] = useState([]);
@@ -8,7 +10,7 @@ export default function Home() {
 
   // Fetch videos
   useEffect(() => {
-    fetch("http://localhost:5000/api/videos")
+    fetch(API_ENDPOINTS.VIDEOS)
       .then((res) => res.json())
       .then(setVideos)
       .catch(() => setError("Failed to load videos"));

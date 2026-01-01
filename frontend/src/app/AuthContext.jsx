@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { API_ENDPOINTS } from "../config/api";
 
 const AuthContext = createContext();
 
@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Check if user is logged in
-    fetch("http://localhost:5000/auth/me", {
+    fetch(API_ENDPOINTS.AUTH_ME, {
       credentials: "include",
     })
       .then((res) => (res.ok ? res.json() : null))
@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = async () => {
-    await fetch("http://localhost:5000/auth/logout", {
+    await fetch(API_ENDPOINTS.AUTH_LOGOUT, {
       method: "POST",
       credentials: "include",
     });

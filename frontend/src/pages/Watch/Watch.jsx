@@ -2,6 +2,8 @@ import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
+import { API_ENDPOINTS } from "../../config/api";
+
 
 function Watch() {
   const playerRef = useRef(null);
@@ -33,7 +35,7 @@ function Watch() {
     // Fetch current video metadata
     const fetchVideoData = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/videos/${videoId}`);
+        const res = await fetch(API_ENDPOINTS.VIDEO_BY_ID(videoId));
         const data = await res.json();
         setVideoData({
           title: data.title,
@@ -48,7 +50,7 @@ function Watch() {
 
   // Fetch all videos for recommendations
   useEffect(() => {
-    fetch("http://localhost:5000/api/videos")
+    fetch(API_ENDPOINTS.VIDEOS)
       .then((res) => res.json())
       .then((videos) =>
         setAllVideos(
@@ -98,7 +100,7 @@ function Watch() {
     // 🔑 Restore progress AFTER metadata loads
     player.one("loadedmetadata", async () => {
       const res = await fetch(
-        `http://localhost:5000/progress/${videoId}/${userId}`
+       API_ENDPOINTS.PROGRESS_BY_VIDEO_USER(videoId, userId)
       );
       const data = await res.json();
 
@@ -110,7 +112,7 @@ function Watch() {
     // Save progress every 5s
     const interval = setInterval(() => {
       if (!player.paused()) {
-        fetch("http://localhost:5000/progress", {
+        fetch(API_ENDPOINTS.PROGRESS, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -123,7 +125,7 @@ function Watch() {
     }, 5000);
 
     player.on("pause", () => {
-      fetch("http://localhost:5000/progress", {
+      fetch(API_ENDPOINTS.PROGRESS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

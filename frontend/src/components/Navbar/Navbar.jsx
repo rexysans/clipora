@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSun, faMoon, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
+import { faSun, faMoon, faRightFromBracket, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "../../app/ThemeContext";
 import { useAuth } from "../../app/AuthContext";
 
@@ -37,6 +37,16 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {user && (
             <>
+              {/* Upload Button */}
+              <Link
+                to="/upload"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 
+                  text-white font-semibold rounded-lg transition-colors"
+              >
+                <FontAwesomeIcon icon={faCloudArrowUp} className="text-sm" />
+                <span className="hidden sm:inline">Upload</span>
+              </Link>
+
               {/* User Profile Section */}
               <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
                 <img
