@@ -47,6 +47,7 @@ function Watch() {
     commentCount: 0,
     userReaction: null,
     uploader: null,
+    thumbnailUrl: null,
   });
   const [error, setError] = useState(null);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -97,6 +98,7 @@ function Watch() {
           commentCount: data.commentCount || 0,
           userReaction: data.userReaction || null,
           uploader: data.uploader || null,
+          thumbnailUrl: data.thumbnailUrl || null,
         });
       } catch (err) {
         setError("Failed to load video metadata");
@@ -244,6 +246,37 @@ function Watch() {
     } catch (err) {
       throw err;
     }
+  };
+
+  // Update thumbnail
+  const handleThumbnailUpdate = async (thumbnailFile) => {
+    if (!user) {
+      throw new Error("You must be logged in to update thumbnail");
+    }
+
+    const formData = new FormData();
+    formData.append("thumbnail", thumbnailFile);
+
+    const response = await fetch(API_ENDPOINTS.VIDEO_THUMBNAIL(videoId), {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to upload thumbnail");
+    }
+
+    const data = await response.json();
+
+    // Update video state with new thumbnail URL
+    setVideoData((prev) => ({
+      ...prev,
+      thumbnailUrl: data.thumbnailUrl,
+    }));
+
+    return data;
   };
 
   // Delete video
@@ -579,6 +612,7 @@ function Watch() {
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
         onSave={handleEditVideo}
+        onThumbnailUpdate={handleThumbnailUpdate}
         video={videoData}
       />
 

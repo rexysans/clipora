@@ -1,8 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 
 export default function RecommendedVideos({ videos, currentVideoId }) {
+  const navigate = useNavigate();
+
   const formatViews = (count) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
     if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
@@ -38,6 +40,15 @@ export default function RecommendedVideos({ videos, currentVideoId }) {
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 5);
 
+  const handleVideoClick = (videoId) => {
+    navigate(`/watch/${videoId}`);
+  };
+
+  const handleChannelClick = (e, channelId) => {
+    e.stopPropagation();
+    navigate(`/channel/${channelId}`);
+  };
+
   return (
     <div className="w-full md:w-[440px] lg:w-[480px] flex-shrink-0">
       <div className="bg-neutral-100 dark:bg-[#181818] rounded-xl p-4 shadow-md min-h-[300px]">
@@ -52,9 +63,10 @@ export default function RecommendedVideos({ videos, currentVideoId }) {
           <div className="flex flex-col gap-4">
             {recommendedVideos.map((video) => (
               <div key={video.id} className="group">
-                <Link
-                  to={`/watch/${video.id}`}
-                  className="flex gap-3 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg p-2 transition"
+                {/* Changed from Link to div with onClick */}
+                <div
+                  onClick={() => handleVideoClick(video.id)}
+                  className="flex gap-3 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg p-2 transition cursor-pointer"
                 >
                   {/* Thumbnail */}
                   <div className="w-52 h-32 bg-neutral-300 dark:bg-neutral-700 rounded-lg overflow-hidden flex-shrink-0">
@@ -87,30 +99,28 @@ export default function RecommendedVideos({ videos, currentVideoId }) {
                     <div className="flex items-center gap-2 mt-2">
                       {/* Channel Avatar - Link to channel */}
                       {video.uploader?.avatar ? (
-                        <Link
-                          to={`/channel/${video.uploader.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex-shrink-0"
+                        <div
+                          onClick={(e) => handleChannelClick(e, video.uploader.id)}
+                          className="flex-shrink-0 cursor-pointer"
                         >
                           <img
                             src={video.uploader.avatar}
                             alt={video.uploader.name}
                             className="w-6 h-6 rounded-full object-cover hover:ring-2 hover:ring-indigo-500 transition"
                           />
-                        </Link>
+                        </div>
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
                       )}
                       
                       {/* Channel Name - Link to channel */}
                       <div className="flex-1 min-w-0">
-                        <Link
-                          to={`/channel/${video.uploader?.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors inline-block truncate"
+                        <span
+                          onClick={(e) => handleChannelClick(e, video.uploader?.id)}
+                          className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors inline-block truncate cursor-pointer"
                         >
                           {video.uploader?.name || "Unknown"}
-                        </Link>
+                        </span>
                       </div>
                     </div>
                     
@@ -124,7 +134,7 @@ export default function RecommendedVideos({ videos, currentVideoId }) {
                       </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               </div>
             ))}
           </div>

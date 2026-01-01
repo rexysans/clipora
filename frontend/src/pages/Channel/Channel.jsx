@@ -83,6 +83,41 @@ export default function Channel() {
     }
   };
 
+  // Handle thumbnail update
+  const handleThumbnailUpdate = async (thumbnailFile) => {
+    if (!user) {
+      throw new Error("You must be logged in to update thumbnail");
+    }
+
+    const formData = new FormData();
+    formData.append("thumbnail", thumbnailFile);
+
+    const response = await fetch(API_ENDPOINTS.VIDEO_THUMBNAIL(editingVideo.id), {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to upload thumbnail");
+    }
+
+    const data = await response.json();
+
+    // Update video thumbnail in the list
+    setChannelData((prev) => ({
+      ...prev,
+      videos: prev.videos.map((v) =>
+        v.id === editingVideo.id
+          ? { ...v, thumbnailUrl: data.thumbnailUrl }
+          : v
+      ),
+    }));
+
+    return data;
+  };
+
   const handleDeleteVideo = async () => {
     try {
       const res = await fetch(API_ENDPOINTS.VIDEO_DELETE(deleteModal.videoId), {
@@ -154,6 +189,7 @@ export default function Channel() {
           setEditingVideo(null);
         }}
         onSave={handleEditVideo}
+        onThumbnailUpdate={handleThumbnailUpdate}
         video={editingVideo}
       />
 

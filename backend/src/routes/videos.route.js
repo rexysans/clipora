@@ -1,8 +1,10 @@
 import { Router } from "express";
 import pool from "../db.js";
 import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
+import path from "path";
 
-import { upload } from "../middleware/upload.js";
+import { upload, uploadThumbnail } from "../middleware/upload.js";
 import { STORAGE } from "../config/storage.js";
 import requireAuth from "../middleware/requireAuth.js";
 
@@ -55,10 +57,6 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch videos" });
   }
 });
-
-
-// Add this to backend/src/routes/videos.route.js
-// After the GET "/" route, add this new route:
 
 // Get videos by user ID
 router.get("/user/:userId", async (req, res) => {
@@ -123,12 +121,6 @@ router.get("/user/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch user videos" });
   }
 });
-
-
-
-
-
-
 
 // Get single video by ID with uploader info and user's reaction
 router.get("/:id", async (req, res) => {
@@ -414,6 +406,229 @@ router.post("/upload", requireAuth, upload.single("video"), async (req, res) => 
   }
 });
 
+// Update video (only owner can update)
+router.put("/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { title, description } = req.body;
+
+    // Validate input
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+
+    if (title.length > 200) {
+      return res.status(400).json({ error: "Title too long (max 200 characters)" });
+    }
+
+    if (description && description.length > 5000) {
+      return res.status(400).json({ error: "Description too long (max 5000 characters)" });
+    }
+
+    // Check if video exists and user is the owner
+    const videoCheck = await pool.query(
+      "SELECT uploader_id FROM videos WHERE id = $1",
+      [id]
+    );
+
+    if (videoCheck.rowCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    if (videoCheck.rows[0].uploader_id !== userId) {
+      return res.status(403).json({ error: "Not authorized to edit this video" });
+    }
+
+    // Update video
+    const result = await pool.query(
+      `UPDATE videos 
+       SET title = $1, description = $2, updated_at = now()
+       WHERE id = $3
+       RETURNING id, title, description, updated_at`,
+      [title.trim(), description?.trim() || null, id]
+    );
+
+    res.json({
+      id: result.rows[0].id,
+      title: result.rows[0].title,
+      description: result.rows[0].description,
+      updatedAt: result.rows[0].updated_at,
+    });
+  } catch (error) {
+    console.error("Error updating video:", error);
+    res.status(500).json({ error: "Failed to update video" });
+  }
+});
+
+// Delete video (only owner can delete)
+router.delete("/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Check if video exists and user is the owner
+    const videoCheck = await pool.query(
+      "SELECT uploader_id, hls_key, thumbnail_path FROM videos WHERE id = $1",
+      [id]
+    );
+
+    if (videoCheck.rowCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    if (videoCheck.rows[0].uploader_id !== userId) {
+      return res.status(403).json({ error: "Not authorized to delete this video" });
+    }
+
+    const thumbnailPath = videoCheck.rows[0].thumbnail_path;
+
+    // Delete video (cascade will delete related records)
+    await pool.query("DELETE FROM videos WHERE id = $1", [id]);
+
+    // Delete thumbnail file if exists
+    if (thumbnailPath) {
+      const thumbFilePath = path.join(process.cwd(), "videos", "thumbs", thumbnailPath);
+      if (fs.existsSync(thumbFilePath)) {
+        try {
+          fs.unlinkSync(thumbFilePath);
+          console.log(`Deleted thumbnail: ${thumbnailPath}`);
+        } catch (err) {
+          console.error(`Failed to delete thumbnail: ${err.message}`);
+        }
+      }
+    }
+
+    // Note: You might want to also delete the video files from storage here
+    // const hlsKey = videoCheck.rows[0].hls_key;
+    // Delete files from videos/hls/{id}/ and backend/uploads/raw/
+
+    res.json({ message: "Video deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    res.status(500).json({ error: "Failed to delete video" });
+  }
+});
+
+// Upload/Update thumbnail for a video (only owner can do this)
+router.post("/:id/thumbnail", requireAuth, uploadThumbnail.single("thumbnail"), async (req, res) => {
+  try {
+    const videoId = req.params.id;
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "Thumbnail file is required" });
+    }
+
+    // Check if video exists and user is the owner
+    const videoCheck = await pool.query(
+      "SELECT uploader_id, thumbnail_path FROM videos WHERE id = $1",
+      [videoId]
+    );
+
+    if (videoCheck.rowCount === 0) {
+      // Clean up uploaded file if video not found
+      fs.unlinkSync(req.file.path);
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    if (videoCheck.rows[0].uploader_id !== userId) {
+      // Clean up uploaded file if not authorized
+      fs.unlinkSync(req.file.path);
+      return res.status(403).json({ error: "Not authorized to update this video's thumbnail" });
+    }
+
+    const oldThumbnailPath = videoCheck.rows[0].thumbnail_path;
+    const newThumbnailFilename = req.file.filename;
+
+    // Update database with new thumbnail path
+    await pool.query(
+      "UPDATE videos SET thumbnail_path = $1, updated_at = now() WHERE id = $2",
+      [newThumbnailFilename, videoId]
+    );
+
+    // Delete old thumbnail file if it exists
+    if (oldThumbnailPath) {
+      const oldFilePath = path.join(process.cwd(), "videos", "thumbs", oldThumbnailPath);
+      if (fs.existsSync(oldFilePath)) {
+        try {
+          fs.unlinkSync(oldFilePath);
+          console.log(`Deleted old thumbnail: ${oldThumbnailPath}`);
+        } catch (err) {
+          console.error(`Failed to delete old thumbnail: ${err.message}`);
+          // Continue anyway - database is already updated
+        }
+      }
+    }
+
+    const thumbnailUrl = `http://localhost:8080/thumbs/${newThumbnailFilename}`;
+
+    res.json({
+      message: "Thumbnail updated successfully",
+      thumbnailPath: newThumbnailFilename,
+      thumbnailUrl: thumbnailUrl,
+    });
+  } catch (error) {
+    console.error("Error uploading thumbnail:", error);
+    // Clean up uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ error: "Failed to upload thumbnail" });
+  }
+});
+
+// Delete thumbnail (only owner can delete)
+router.delete("/:id/thumbnail", requireAuth, async (req, res) => {
+  try {
+    const videoId = req.params.id;
+    const userId = req.user.id;
+
+    // Check if video exists and user is the owner
+    const videoCheck = await pool.query(
+      "SELECT uploader_id, thumbnail_path FROM videos WHERE id = $1",
+      [videoId]
+    );
+
+    if (videoCheck.rowCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    if (videoCheck.rows[0].uploader_id !== userId) {
+      return res.status(403).json({ error: "Not authorized to delete this video's thumbnail" });
+    }
+
+    const thumbnailPath = videoCheck.rows[0].thumbnail_path;
+
+    if (!thumbnailPath) {
+      return res.status(404).json({ error: "No thumbnail to delete" });
+    }
+
+    // Update database - remove thumbnail reference
+    await pool.query(
+      "UPDATE videos SET thumbnail_path = NULL, updated_at = now() WHERE id = $1",
+      [videoId]
+    );
+
+    // Delete thumbnail file
+    const filePath = path.join(process.cwd(), "videos", "thumbs", thumbnailPath);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+        console.log(`Deleted thumbnail: ${thumbnailPath}`);
+      } catch (err) {
+        console.error(`Failed to delete thumbnail file: ${err.message}`);
+        // Database is already updated, so continue
+      }
+    }
+
+    res.json({ message: "Thumbnail deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting thumbnail:", error);
+    res.status(500).json({ error: "Failed to delete thumbnail" });
+  }
+});
+
 // Get comments for a video
 router.get("/:id/comments", async (req, res) => {
   try {
@@ -579,102 +794,6 @@ router.delete("/:id/comments/:commentId", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to delete comment" });
   }
 });
-
-// Add these routes to backend/src/routes/videos.route.js
-// Add after the upload route
-
-// Update video (only owner can update)
-router.put("/:id", requireAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
-    const { title, description } = req.body;
-
-    // Validate input
-    if (!title || title.trim().length === 0) {
-      return res.status(400).json({ error: "Title is required" });
-    }
-
-    if (title.length > 200) {
-      return res.status(400).json({ error: "Title too long (max 200 characters)" });
-    }
-
-    if (description && description.length > 5000) {
-      return res.status(400).json({ error: "Description too long (max 5000 characters)" });
-    }
-
-    // Check if video exists and user is the owner
-    const videoCheck = await pool.query(
-      "SELECT uploader_id FROM videos WHERE id = $1",
-      [id]
-    );
-
-    if (videoCheck.rowCount === 0) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-
-    if (videoCheck.rows[0].uploader_id !== userId) {
-      return res.status(403).json({ error: "Not authorized to edit this video" });
-    }
-
-    // Update video
-    const result = await pool.query(
-      `UPDATE videos 
-       SET title = $1, description = $2, updated_at = now()
-       WHERE id = $3
-       RETURNING id, title, description, updated_at`,
-      [title.trim(), description?.trim() || null, id]
-    );
-
-    res.json({
-      id: result.rows[0].id,
-      title: result.rows[0].title,
-      description: result.rows[0].description,
-      updatedAt: result.rows[0].updated_at,
-    });
-  } catch (error) {
-    console.error("Error updating video:", error);
-    res.status(500).json({ error: "Failed to update video" });
-  }
-});
-
-// Delete video (only owner can delete)
-router.delete("/:id", requireAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
-
-    // Check if video exists and user is the owner
-    const videoCheck = await pool.query(
-      "SELECT uploader_id, hls_key FROM videos WHERE id = $1",
-      [id]
-    );
-
-    if (videoCheck.rowCount === 0) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-
-    if (videoCheck.rows[0].uploader_id !== userId) {
-      return res.status(403).json({ error: "Not authorized to delete this video" });
-    }
-
-    // Delete video (cascade will delete related records)
-    await pool.query("DELETE FROM videos WHERE id = $1", [id]);
-
-    // Note: You might want to also delete the video files from storage here
-    // const hlsKey = videoCheck.rows[0].hls_key;
-    // Delete files from videos/hls/{hlsKey}/ and backend/uploads/raw/
-
-    res.json({ message: "Video deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting video:", error);
-    res.status(500).json({ error: "Failed to delete video" });
-  }
-});
-
-
-
-
 
 // Update a comment
 router.put("/:id/comments/:commentId", requireAuth, async (req, res) => {
