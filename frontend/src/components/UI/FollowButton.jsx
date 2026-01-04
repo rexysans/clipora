@@ -12,28 +12,38 @@ export default function FollowButton({ userId, initialFollowerCount, followerNam
   const [checkingStatus, setCheckingStatus] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const checkFollowStatus = async () => {
+      try {
+        const res = await fetch(API_ENDPOINTS.USER_FOLLOW_STATUS(userId), {
+          credentials: "include",
+        });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          setIsFollowing(data.isFollowing);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error("Failed to check follow status:", err);
+        }
+      } finally {
+        if (isMounted) {
+          setCheckingStatus(false);
+        }
+      }
+    };
+
     if (user && userId && user.id !== userId) {
       checkFollowStatus();
     } else {
       setCheckingStatus(false);
     }
-  }, [user, userId]);
 
-  const checkFollowStatus = async () => {
-    try {
-      const res = await fetch(API_ENDPOINTS.USER_FOLLOW_STATUS(userId), {
-        credentials: "include",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setIsFollowing(data.isFollowing);
-      }
-    } catch (err) {
-      console.error("Failed to check follow status:", err);
-    } finally {
-      setCheckingStatus(false);
-    }
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, [user, userId]);
 
   const handleFollow = async () => {
     if (!user) {
@@ -101,14 +111,27 @@ export default function FollowButton({ userId, initialFollowerCount, followerNam
       <button
         onClick={handleFollow}
         disabled={loading}
-        className={`flex items-center gap-2 px-6 py-2 font-semibold rounded-lg transition-all ${
-          isFollowing
-            ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600"
-            : "bg-indigo-600 hover:bg-indigo-700 text-white"
-        } disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`
+          px-6 py-2 font-semibold rounded-lg transition-all
+          ${
+            isFollowing
+              ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600"
+              : "bg-accent hover:bg-accentSoft text-white"
+          }
+          disabled:opacity-50 disabled:cursor-not-allowed
+        `}
       >
-        <FontAwesomeIcon icon={isFollowing ? faUserCheck : faUserPlus} />
-        {loading ? "..." : isFollowing ? "Following" : "Follow"}
+        {loading ? (
+          "Loading..."
+        ) : (
+          <>
+            <FontAwesomeIcon
+              icon={isFollowing ? faUserCheck : faUserPlus}
+              className="mr-2"
+            />
+            {isFollowing ? "Following" : "Follow"}
+          </>
+        )}
       </button>
     </div>
   );

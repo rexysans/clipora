@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // Added useRef
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { API_ENDPOINTS } from "../../config/api";
@@ -8,27 +8,50 @@ function WatchLaterButton({ videoId, className = "" }) {
   const { user } = useAuth();
   const [inWatchLater, setInWatchLater] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Ref to track mount status for the event handler
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    if (user) {
-      checkWatchLaterStatus();
-    }
-  }, [user, videoId]);
+    // 1. Create AbortController
+    const controller = new AbortController();
+    const signal = controller.signal;
 
-  const checkWatchLaterStatus = async () => {
-    try {
-      const res = await fetch(API_ENDPOINTS.VIDEO_WATCH_LATER_STATUS(videoId), {
-        credentials: "include",
-      });
+    // Reset ref on mount
+    isMounted.current = true;
 
-      if (res.ok) {
-        const data = await res.json();
-        setInWatchLater(data.inWatchLater);
+    const checkWatchLaterStatus = async () => {
+      if (!user) return;
+      
+      try {
+        // 2. Pass signal to fetch
+        const res = await fetch(API_ENDPOINTS.VIDEO_WATCH_LATER_STATUS(videoId), {
+          credentials: "include",
+          signal: signal, 
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // The AbortController handles the cleanup, but checking ref is double safety
+          if (isMounted.current) {
+            setInWatchLater(data.inWatchLater);
+          }
+        }
+      } catch (err) {
+        // 3. Ignore errors caused by aborting
+        if (err.name === 'AbortError') return;
+        console.error("Error checking watch later status:", err);
       }
-    } catch (err) {
-      console.error("Error checking watch later status:", err);
-    }
-  };
+    };
+
+    checkWatchLaterStatus();
+
+    return () => {
+      // 4. Cancel the request and update ref on unmount
+      controller.abort();
+      isMounted.current = false;
+    };
+  }, [user, videoId]);
 
   const handleToggle = async (e) => {
     e.preventDefault();
@@ -44,30 +67,23 @@ function WatchLaterButton({ videoId, className = "" }) {
     setLoading(true);
 
     try {
-      if (inWatchLater) {
-        const res = await fetch(API_ENDPOINTS.VIDEO_WATCH_LATER(videoId), {
-          method: "DELETE",
-          credentials: "include",
-        });
+      const method = inWatchLater ? "DELETE" : "POST";
+      const res = await fetch(API_ENDPOINTS.VIDEO_WATCH_LATER(videoId), {
+        method,
+        credentials: "include",
+      });
 
-        if (res.ok) {
-          setInWatchLater(false);
-        }
-      } else {
-        const res = await fetch(API_ENDPOINTS.VIDEO_WATCH_LATER(videoId), {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          setInWatchLater(true);
-        }
+      // 5. Check if still mounted before updating state after user interaction
+      if (isMounted.current && res.ok) {
+        setInWatchLater(!inWatchLater);
       }
     } catch (err) {
       console.error("Error toggling watch later:", err);
       alert("Failed to update watch later");
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 

@@ -12,9 +12,13 @@ function Following() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchFollowing = async () => {
       if (!user) {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -59,16 +63,26 @@ function Following() {
           })
         );
         
-        setFollowing(channelsWithDetails);
+        if (isMounted) {
+          setFollowing(channelsWithDetails);
+        }
       } catch (err) {
-        console.error("Error fetching following:", err);
-        setError(err.message);
+        if (isMounted) {
+          console.error("Error fetching following:", err);
+          setError(err.message);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchFollowing();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   if (!user) {
