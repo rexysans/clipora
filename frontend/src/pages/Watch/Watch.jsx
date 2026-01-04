@@ -902,40 +902,42 @@ const handleThumbnailDelete = async (videoId) => {
 
                   {/* Uploader Info - Clickable */}
                   {videoData.uploader && (
-                    <div className="flex items-center justify-between mb-4 p-3 -ml-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 p-3 -ml-3">
                       <Link
                         to={`/channel/${videoData.uploader.id}`}
-                        className="flex items-center gap-3 hover:bg-neutral-200 dark:hover:bg-neutral-700 p-3 rounded-lg transition-colors -ml-3"
+                        className="flex items-center gap-3 hover:bg-neutral-200 dark:hover:bg-neutral-700 p-3 rounded-lg transition-colors -ml-3 w-full sm:w-auto"
                       >
                         <img
                           src={videoData.uploader.avatar}
                           alt={videoData.uploader.name}
-                          className="w-12 h-12 rounded-full object-cover"
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                         />
-                        <div>
-                          <p className="font-semibold text-base">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-base truncate">
                             {videoData.uploader.name}
                           </p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
                             {videoData.uploader.followerCount || 0} {videoData.uploader.followerName || 'Subscribers'}
                           </p>
                         </div>
                       </Link>
                       {!isOwner && (
-                        <FollowButton
-                          userId={videoData.uploader.id}
-                          initialFollowerCount={videoData.uploader.followerCount || 0}
-                          followerName={videoData.uploader.followerName || 'Subscribers'}
-                          onFollowChange={(isFollowing, newCount) => {
-                            setVideoData(prev => ({
-                              ...prev,
-                              uploader: {
-                                ...prev.uploader,
-                                followerCount: newCount
-                              }
-                            }));
-                          }}
-                        />
+                        <div className="w-full sm:w-auto sm:ml-3">
+                          <FollowButton
+                            userId={videoData.uploader.id}
+                            initialFollowerCount={videoData.uploader.followerCount || 0}
+                            followerName={videoData.uploader.followerName || 'Subscribers'}
+                            onFollowChange={(isFollowing, newCount) => {
+                              setVideoData(prev => ({
+                                ...prev,
+                                uploader: {
+                                  ...prev.uploader,
+                                  followerCount: newCount
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
                       )}
                     </div>
                   )}
