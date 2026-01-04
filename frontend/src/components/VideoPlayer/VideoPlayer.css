@@ -15,6 +15,25 @@
   background: rgba(120, 0, 0, 0.7);
 }
 
+/* --- RESPONSIVE VIDEO PLAYER --- */
+.video-js {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Mobile responsiveness - scale down on smaller screens */
+@media (max-width: 600px) {
+  .video-js .vjs-control-bar {
+    font-size: 90%;
+  }
+}
+
+@media (max-width: 400px) {
+  .video-js .vjs-control-bar {
+    font-size: 80%;
+  }
+}
+
 /* --- GEAR ICON SIZE --- */
 /* Makes the gear icon larger (same size as Fullscreen icon) */
 .vjs-icon-cog:before {
@@ -26,12 +45,7 @@
 .vjs-menu-button-popup .vjs-menu {
   width: 100px;
   left: -35px;
-  
-  /* FIX 1: Set bottom to 30px (Standard Control Bar Height)
-     This places the menu exactly ON TOP of the bar, removing the gap. */
   bottom: 0px; 
-  
-  /* FIX 2: Allow the invisible bridge to stick out */
   overflow: visible; 
 }
 

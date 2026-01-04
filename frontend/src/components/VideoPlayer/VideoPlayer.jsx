@@ -15,7 +15,21 @@ export const VideoPlayer = (props) => {
       videoElement.classList.add("vjs-big-play-centered");
       videoRef.current.appendChild(videoElement);
 
-      const player = (playerRef.current = videojs(videoElement, options, () => {
+      // Enhanced options for better responsiveness
+      const playerOptions = {
+        ...options,
+        responsive: true,
+        fluid: true,
+        fill: false,
+        aspectRatio: '16:9',
+        controlBar: {
+          volumePanel: {
+            inline: false
+          }
+        }
+      };
+
+      const player = (playerRef.current = videojs(videoElement, playerOptions, () => {
         videojs.log("player is ready");
         onReady && onReady(player);
         
