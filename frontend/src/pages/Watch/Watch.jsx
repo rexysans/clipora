@@ -2,7 +2,7 @@ import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
-import { API_ENDPOINTS } from "../../config/api";
+import { API_ENDPOINTS} from "../../config/api";
 import { useAuth } from "../../app/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -18,17 +18,18 @@ import RecommendedVideos from "../../components/VideoPlayer/RecommendedVideos";
 import CommentSection from "../../components/Comments/CommentSection";
 import FollowButton from "../../components/UI/FollowButton";
 
-const VIEW_THRESHOLD = 20;
+const VIEW_THRESHOLD = 5; // 5 seconds - reasonable for both short and long videos
 
 function Watch() {
   const playerRef = useRef(null);
   const { videoId } = useParams();
   const navigate = useNavigate();
-  const videoLink = `http://localhost:8080/hls/${videoId}/master.m3u8`;
+  const videoLink = API_ENDPOINTS.HLS_STREAM(videoId);
   const { user } = useAuth();
 
   const viewTimerStarted = useRef(false);
   const viewTimeoutId = useRef(null);
+  const currentVideoIdRef = useRef(videoId); // Track current videoId for event listeners
 
   function getAnonymousUserId() {
     let id = localStorage.getItem("anon_user_id");
@@ -112,12 +113,14 @@ function Watch() {
   useEffect(() => {
     const fetchComments = async () => {
       setLoadingComments(true);
+      setComments([]); // Clear previous comments
       try {
         const res = await fetch(API_ENDPOINTS.VIDEO_COMMENTS(videoId));
         const data = await res.json();
         setComments(data);
       } catch (err) {
         console.error("Failed to load comments:", err);
+        setComments([]); // Ensure empty on error
       } finally {
         setLoadingComments(false);
       }
@@ -329,13 +332,13 @@ const handleThumbnailDelete = async (videoId) => {
   };
 
   // Post comment
-  const handlePostComment = async () => {
+  const handlePostComment = async (content) => {
     if (!user) {
       window.location.href = "/login";
       return;
     }
 
-    if (!commentText.trim()) return;
+    if (!content || !content.trim()) return;
 
     setPostingComment(true);
     try {
@@ -343,20 +346,25 @@ const handleThumbnailDelete = async (videoId) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ content: commentText }),
+        body: JSON.stringify({ content: content.trim() }),
       });
 
       if (res.ok) {
         const newComment = await res.json();
-        setComments([newComment, ...comments]);
-        setCommentText("");
+        console.log('New comment posted:', newComment);
+        setComments(prev => [newComment, ...prev]);
         setVideoData((prev) => ({
           ...prev,
           commentCount: prev.commentCount + 1,
         }));
+      } else {
+        const error = await res.json();
+        console.error('Failed to post comment:', error);
+        alert(error.error || 'Failed to post comment');
       }
     } catch (err) {
       console.error("Failed to post comment:", err);
+      alert('Failed to post comment. Please try again.');
     } finally {
       setPostingComment(false);
     }
@@ -526,23 +534,41 @@ const handleThumbnailDelete = async (videoId) => {
   );
 
   const startViewTracking = () => {
-    if (!user) return;
-    if (viewTimerStarted.current) return;
+    if (!user) {
+      console.log('[View] User not logged in, skipping view tracking');
+      return;
+    }
+    if (viewTimerStarted.current) {
+      console.log('[View] View tracking already started');
+      return;
+    }
 
+    console.log('[View] Starting view tracking timer (5 seconds)');
     viewTimerStarted.current = true;
+    const trackingVideoId = currentVideoIdRef.current; // Capture current videoId
 
     viewTimeoutId.current = setTimeout(() => {
-      fetch(API_ENDPOINTS.VIDEO_VIEW(videoId), {
+      console.log('[View] 5 seconds elapsed, tracking view for video:', trackingVideoId);
+      fetch(API_ENDPOINTS.VIDEO_VIEW(trackingVideoId), {
         method: "POST",
         credentials: "include",
       })
-        .then((res) => {
+        .then(async (res) => {
           if (res.status === 201) {
-            setVideoData((prev) => ({ ...prev, views: prev.views + 1 }));
+            console.log('[View] View tracked successfully - NEW view added');
+            // Only update if still on the same video
+            if (trackingVideoId === currentVideoIdRef.current) {
+              setVideoData((prev) => ({ ...prev, views: prev.views + 1 }));
+            }
+          } else if (res.status === 204) {
+            console.log('[View] View already tracked for this user on this video');
+          } else {
+            const errorData = await res.json().catch(() => ({}));
+            console.log('[View] View tracking response:', res.status, errorData);
           }
         })
         .catch((err) => {
-          console.error("Failed to track view:", err);
+          console.error('[View] Failed to track view:', err);
         });
     }, VIEW_THRESHOLD * 1000);
   };
@@ -552,6 +578,7 @@ const handleThumbnailDelete = async (videoId) => {
       clearTimeout(viewTimeoutId.current);
       viewTimeoutId.current = null;
       viewTimerStarted.current = false;
+      console.log('[View] View tracking canceled');
     }
   };
 
@@ -639,15 +666,14 @@ const handleThumbnailDelete = async (videoId) => {
     });
 
     player.on("pause", () => {
-      cancelViewTracking();
+      // Don't cancel view tracking on pause - let it complete
       clearInterval(progressInterval);
       // Save progress immediately when paused
       saveProgress();
     });
 
-    player.on("seeking", () => {
-      cancelViewTracking();
-    });
+    // Don't cancel view tracking on seeking - let it complete
+    // (removed player.on("seeking") handler to allow view tracking to persist)
 
     player.on("dispose", () => {
       clearInterval(progressInterval);
@@ -717,27 +743,22 @@ const handleThumbnailDelete = async (videoId) => {
     return () => clearTimeout(timer);
   }, [videoId, user]);
 
+  // Cleanup on unmount only (not on videoId change)
   useEffect(() => {
     return () => {
       cancelViewTracking();
-      // Save progress when component unmounts (e.g., navigating to another video)
-      if (playerRef.current && !playerRef.current.isDisposed()) {
-        const userId = user?.id || getAnonymousUserId();
-        const currentTime = playerRef.current.currentTime();
-        if (currentTime > 0) {
-          fetch(API_ENDPOINTS.PROGRESS, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              videoId,
-              userId,
-              lastTime: currentTime,
-            }),
-          }).catch(() => {});
-        }
-      }
     };
-  }, [videoId, user]);
+  }, []);
+
+  // Reset view tracking when videoId changes
+  useEffect(() => {
+    currentVideoIdRef.current = videoId; // Update ref with current videoId
+    viewTimerStarted.current = false;
+    if (viewTimeoutId.current) {
+      clearTimeout(viewTimeoutId.current);
+      viewTimeoutId.current = null;
+    }
+  }, [videoId]);
 
   return (
     <>
@@ -948,6 +969,8 @@ const handleThumbnailDelete = async (videoId) => {
               user={user}
               comments={comments}
               commentCount={videoData.commentCount}
+              loadingComments={loadingComments}
+              postingComment={postingComment}
               onPostComment={handlePostComment}
               onPostReply={handlePostReply}
               onEditComment={handleEditComment}
@@ -958,11 +981,10 @@ const handleThumbnailDelete = async (videoId) => {
           </div>
 
           {/* Sidebar: Recommended videos */}
-          <RecommendedVideos videos={allVideos} currentVideoId={videoId} />
+          <RecommendedVideos videos={recommended} currentVideoId={videoId} />
         </div>
       </div>
     </>
   );
 }
-
 export default Watch;

@@ -9,22 +9,20 @@ export default function CommentSection({
   user, 
   comments, 
   commentCount,
+  loadingComments,
+  postingComment,
   onPostComment,
   onPostReply,
   onEditComment,
   onDeleteComment
 }) {
   const [commentText, setCommentText] = useState("");
-  const [postingComment, setPostingComment] = useState(false);
-  const [loadingComments, setLoadingComments] = useState(false);
 
   const handlePost = async () => {
     if (!commentText.trim()) return;
     
-    setPostingComment(true);
     await onPostComment(commentText);
     setCommentText("");
-    setPostingComment(false);
   };
 
   return (

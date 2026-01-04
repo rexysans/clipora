@@ -1,5 +1,6 @@
 // frontend/src/config/api.js
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+export const HLS_BASE_URL = import.meta.env.VITE_HLS_BASE_URL || 'http://localhost:8080';
 
 export const API_ENDPOINTS = {
   AUTH_ME: `${API_BASE_URL}/auth/me`,
@@ -27,4 +28,6 @@ export const API_ENDPOINTS = {
   USER_FOLLOWER_NAME: `${API_BASE_URL}/users/follower-name`,
   // Search
   SEARCH: `${API_BASE_URL}/search`,
+  // HLS Stream
+  HLS_STREAM: (videoId) => `${HLS_BASE_URL}/hls/${videoId}/master.m3u8`,
 };
