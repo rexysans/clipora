@@ -1,17 +1,22 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Navbar from "../../components/Navbar/Navbar";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCloudArrowUp, faVideo, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import { faCloudArrowUp, faVideo, faCheckCircle, faImage, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { API_ENDPOINTS } from "../../config/api";
+import { useAuth } from "../../app/AuthContext";
 
 export default function Upload() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const thumbnailInputRef = useRef(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     video: null,
+    thumbnail: null,
   });
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -31,6 +36,41 @@ export default function Upload() {
       }
       setFormData((prev) => ({ ...prev, video: file }));
       setError("");
+    }
+  };
+
+  const handleThumbnailChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file for thumbnail");
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Thumbnail size must be less than 5MB");
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, thumbnail: file }));
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setThumbnailPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+    setError("");
+  };
+
+  const handleRemoveThumbnail = () => {
+    setFormData((prev) => ({ ...prev, thumbnail: null }));
+    setThumbnailPreview(null);
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = "";
     }
   };
 
@@ -76,6 +116,7 @@ export default function Upload() {
     setUploading(true);
 
     try {
+      // Step 1: Upload video
       const data = new FormData();
       data.append("video", formData.video);
       data.append("title", formData.title);
@@ -95,15 +136,39 @@ export default function Upload() {
       }
 
       const result = await response.json();
+      const videoId = result.id;
+
+      // Step 2: Upload thumbnail if provided
+      if (formData.thumbnail) {
+        const thumbnailData = new FormData();
+        thumbnailData.append("thumbnail", formData.thumbnail);
+
+        const thumbnailResponse = await fetch(API_ENDPOINTS.VIDEO_THUMBNAIL(videoId), {
+          method: "POST",
+          credentials: "include",
+          body: thumbnailData,
+        });
+
+        if (!thumbnailResponse.ok) {
+          console.error("Thumbnail upload failed, but video was uploaded successfully");
+          // Don't fail the whole upload if thumbnail fails
+        }
+      }
+
       setSuccess(true);
       
       // Reset form
-      setFormData({ title: "", description: "", video: null });
+      setFormData({ title: "", description: "", video: null, thumbnail: null });
+      setThumbnailPreview(null);
       
-      // Redirect to home after 2 seconds
+      // Redirect to channel page after 1.5 seconds to see processing
       setTimeout(() => {
-        navigate("/");
-      }, 2000);
+        if (user?.id) {
+          navigate(`/channel/${user.id}`);
+        } else {
+          navigate("/");
+        }
+      }, 1500);
     } catch (err) {
       setError(err.message || "Failed to upload video");
     } finally {
@@ -189,6 +254,69 @@ export default function Upload() {
               </div>
             </div>
 
+            {/* Thumbnail Upload Area */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-3">
+                Thumbnail (Optional)
+              </label>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                If you don't upload a thumbnail, one will be automatically generated from your video.
+              </p>
+              
+              {thumbnailPreview ? (
+                <div className="relative group">
+                  <img
+                    src={thumbnailPreview}
+                    alt="Thumbnail preview"
+                    className="w-full h-48 object-cover rounded-lg border-2 border-neutral-300 dark:border-neutral-700"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => thumbnailInputRef.current?.click()}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition"
+                    >
+                      <FontAwesomeIcon icon={faImage} className="mr-2" />
+                      Change
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveThumbnail}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition"
+                    >
+                      <FontAwesomeIcon icon={faTrash} className="mr-2" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => thumbnailInputRef.current?.click()}
+                  className="w-full h-48 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-indigo-500 dark:hover:border-indigo-400 transition group"
+                >
+                  <FontAwesomeIcon
+                    icon={faImage}
+                    className="text-4xl text-neutral-400 dark:text-neutral-600 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition"
+                  />
+                  <p className="text-neutral-600 dark:text-neutral-400 font-medium">
+                    Click to upload thumbnail
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-500">
+                    PNG, JPG, GIF, WebP (Max 5MB)
+                  </p>
+                </button>
+              )}
+              
+              <input
+                ref={thumbnailInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleThumbnailChange}
+                className="hidden"
+              />
+            </div>
+
             {/* Title Input */}
             <div className="mb-6">
               <label
@@ -242,8 +370,11 @@ export default function Upload() {
             {/* Success Message */}
             {success && (
               <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <p className="text-green-600 dark:text-green-400 text-sm">
-                  Video uploaded successfully! Redirecting...
+                <p className="text-green-600 dark:text-green-400 text-sm font-semibold mb-1">
+                  ✅ Video uploaded successfully!
+                </p>
+                <p className="text-green-600 dark:text-green-400 text-xs">
+                  Redirecting to your channel to see processing progress...
                 </p>
               </div>
             )}

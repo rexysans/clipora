@@ -279,6 +279,33 @@ function Watch() {
     return data;
   };
 
+// Delete thumbnail (revert to default)
+const handleThumbnailDelete = async (videoId) => {
+  if (!user) {
+    throw new Error("You must be logged in to delete thumbnail");
+  }
+
+  const response = await fetch(API_ENDPOINTS.VIDEO_THUMBNAIL(videoId), {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to delete thumbnail");
+  }
+
+  const data = await response.json();
+
+  // Update video state with new thumbnail URL (default or null)
+  setVideoData((prev) => ({
+    ...prev,
+    thumbnailUrl: data.thumbnailUrl,
+  }));
+
+  return data;
+};
+
   // Delete video
   const handleDeleteVideo = async () => {
     try {
@@ -608,13 +635,19 @@ function Watch() {
       />
 
       {/* Edit Video Modal */}
-      <VideoEditModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        onSave={handleEditVideo}
-        onThumbnailUpdate={handleThumbnailUpdate}
-        video={videoData}
-      />
+<VideoEditModal
+  isOpen={editModalOpen}
+  onClose={() => setEditModalOpen(false)}
+  onSave={handleEditVideo}
+  onThumbnailUpdate={handleThumbnailUpdate}
+  onThumbnailDelete={handleThumbnailDelete}  // Add this line
+  video={{
+    id: videoId,
+    title: videoData.title,
+    description: videoData.description,
+    thumbnailUrl: videoData.thumbnailUrl,
+  }}
+/>
 
       <div className="flex flex-col items-center bg-neutral-50 dark:bg-[#0f0f0f] min-h-screen w-full text-neutral-900 dark:text-neutral-100">
         <div className="w-full max-w-6xl flex flex-col md:flex-row gap-8 mt-8 px-4">

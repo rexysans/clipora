@@ -2,7 +2,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faThumbsUp, faEdit, faTrash, faEllipsisV } from "@fortawesome/free-solid-svg-icons";
+import {
+  faEye,
+  faThumbsUp,
+  faEdit,
+  faTrash,
+  faEllipsisV,
+} from "@fortawesome/free-solid-svg-icons";
 import Navbar from "../../components/Navbar/Navbar";
 import Loader from "../../components/UI/Loader";
 import ErrorMessage from "../../components/UI/ErrorMessage";
@@ -10,6 +16,7 @@ import ConfirmModal from "../../components/UI/ConfirmModal";
 import VideoEditModal from "../../components/UI/VideoEditModal";
 import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../app/AuthContext";
+import ProcessingVideoCard from "../../components/UI/ProcessingVideoCard";
 
 export default function Channel() {
   const { userId } = useParams();
@@ -68,7 +75,7 @@ export default function Channel() {
       }
 
       const data = await res.json();
-      
+
       // Update video in the list
       setChannelData((prev) => ({
         ...prev,
@@ -92,11 +99,14 @@ export default function Channel() {
     const formData = new FormData();
     formData.append("thumbnail", thumbnailFile);
 
-    const response = await fetch(API_ENDPOINTS.VIDEO_THUMBNAIL(editingVideo.id), {
-      method: "POST",
-      credentials: "include",
-      body: formData,
-    });
+    const response = await fetch(
+      API_ENDPOINTS.VIDEO_THUMBNAIL(editingVideo.id),
+      {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -109,9 +119,36 @@ export default function Channel() {
     setChannelData((prev) => ({
       ...prev,
       videos: prev.videos.map((v) =>
-        v.id === editingVideo.id
-          ? { ...v, thumbnailUrl: data.thumbnailUrl }
-          : v
+        v.id === editingVideo.id ? { ...v, thumbnailUrl: data.thumbnailUrl } : v
+      ),
+    }));
+
+    return data;
+  };
+
+  // Add this new handler after handleThumbnailUpdate
+  const handleThumbnailDelete = async (videoId) => {
+    if (!user) {
+      throw new Error("You must be logged in to delete thumbnail");
+    }
+
+    const response = await fetch(API_ENDPOINTS.VIDEO_THUMBNAIL(videoId), {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to delete thumbnail");
+    }
+
+    const data = await response.json();
+
+    // Update video thumbnail in the list (revert to default)
+    setChannelData((prev) => ({
+      ...prev,
+      videos: prev.videos.map((v) =>
+        v.id === videoId ? { ...v, thumbnailUrl: data.thumbnailUrl } : v
       ),
     }));
 
@@ -166,6 +203,10 @@ export default function Channel() {
   }
 
   const { user: channelUser, videos } = channelData;
+  // After the readyVideos filter, add this:
+  const processingVideos = videos.filter(
+    (v) => v.status === "processing" || v.status === "uploaded"
+  );
   const readyVideos = videos.filter((v) => v.status === "ready");
 
   return (
@@ -190,6 +231,7 @@ export default function Channel() {
         }}
         onSave={handleEditVideo}
         onThumbnailUpdate={handleThumbnailUpdate}
+        onThumbnailDelete={handleThumbnailDelete} // Add this line
         video={editingVideo}
       />
 
@@ -206,7 +248,8 @@ export default function Channel() {
               <div>
                 <h1 className="text-3xl font-bold mb-2">{channelUser.name}</h1>
                 <p className="text-neutral-600 dark:text-neutral-400">
-                  {readyVideos.length} {readyVideos.length === 1 ? "video" : "videos"}
+                  {readyVideos.length}{" "}
+                  {readyVideos.length === 1 ? "video" : "videos"}
                 </p>
                 {isOwnChannel && (
                   <p className="text-sm text-indigo-600 dark:text-indigo-400 mt-1">
@@ -216,6 +259,18 @@ export default function Channel() {
               </div>
             </div>
           </div>
+
+          {/* Processing Videos Section */}
+          {processingVideos.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold mb-4">Processing Videos</h2>
+              <div className="space-y-4">
+                {processingVideos.map((video) => (
+                  <ProcessingVideoCard key={video.id} video={video} />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Videos Grid */}
           {readyVideos.length === 0 ? (
@@ -258,7 +313,10 @@ export default function Channel() {
                     <div className="p-4">
                       {/* Title and Menu */}
                       <div className="flex items-start gap-2 mb-2">
-                        <Link to={`/watch/${video.id}`} className="flex-1 min-w-0">
+                        <Link
+                          to={`/watch/${video.id}`}
+                          className="flex-1 min-w-0"
+                        >
                           <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                             {video.title}
                           </h3>
@@ -290,7 +348,7 @@ export default function Channel() {
                                   className="fixed inset-0 z-30"
                                   onClick={() => setActiveVideoMenu(null)}
                                 />
-                                
+
                                 {/* Dropdown Menu */}
                                 <div className="absolute right-0 top-10 w-44 bg-white dark:bg-neutral-800 rounded-lg shadow-2xl border border-neutral-200 dark:border-neutral-700 py-1 z-40 overflow-visible">
                                   <button
@@ -303,7 +361,10 @@ export default function Channel() {
                                     }}
                                     className="w-full px-4 py-2.5 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-3 text-neutral-900 dark:text-neutral-100 transition"
                                   >
-                                    <FontAwesomeIcon icon={faEdit} className="text-xs w-4" />
+                                    <FontAwesomeIcon
+                                      icon={faEdit}
+                                      className="text-xs w-4"
+                                    />
                                     <span>Edit Video</span>
                                   </button>
                                   <div className="h-px bg-neutral-200 dark:bg-neutral-700 my-1" />
@@ -319,7 +380,10 @@ export default function Channel() {
                                     }}
                                     className="w-full px-4 py-2.5 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-red-600 dark:text-red-400 transition"
                                   >
-                                    <FontAwesomeIcon icon={faTrash} className="text-xs w-4" />
+                                    <FontAwesomeIcon
+                                      icon={faTrash}
+                                      className="text-xs w-4"
+                                    />
                                     <span>Delete Video</span>
                                   </button>
                                 </div>
@@ -336,7 +400,10 @@ export default function Channel() {
                           <span>{video.views.toLocaleString()} views</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faThumbsUp} className="text-xs" />
+                          <FontAwesomeIcon
+                            icon={faThumbsUp}
+                            className="text-xs"
+                          />
                           <span>{video.likes.toLocaleString()}</span>
                         </div>
                       </div>

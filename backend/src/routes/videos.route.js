@@ -10,46 +10,62 @@ import requireAuth from "../middleware/requireAuth.js";
 
 const router = Router();
 
+// Helper function to get thumbnail URL with fallback to default FFmpeg-generated thumbnail
+function getThumbnailUrl(videoId, thumbnailPath) {
+  if (thumbnailPath) {
+    // Custom uploaded thumbnail
+    return `http://localhost:8080/thumbs/${thumbnailPath}`;
+  }
+  
+  // Check if default FFmpeg-generated thumbnail exists
+  const defaultThumbPath = path.join(process.cwd(), "videos", "thumbs", `${videoId}.jpg`);
+  if (fs.existsSync(defaultThumbPath)) {
+    return `http://localhost:8080/thumbs/${videoId}.jpg`;
+  }
+  
+  return null;
+}
+
 // Get all videos with uploader info
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT 
-        v.id, 
-        v.title, 
-        v.description, 
-        v.status, 
-        v.created_at, 
-        v.views, 
-        v.likes,
-        v.dislikes,
-        v.thumbnail_path,
-        u.id as uploader_id,
-        u.name as uploader_name,
-        u.avatar_url as uploader_avatar
-      FROM videos v
-      LEFT JOIN users u ON v.uploader_id = u.id
-      ORDER BY v.created_at DESC
-    `);
-    
-    const videos = result.rows.map((v) => ({
-      id: v.id,
-      title: v.title,
-      description: v.description,
-      status: v.status,
-      created_at: v.created_at,
-      views: v.views || 0,
-      likes: v.likes || 0,
-      dislikes: v.dislikes || 0,
-      thumbnailUrl: v.thumbnail_path
-        ? `http://localhost:8080/thumbs/${v.thumbnail_path}`
-        : null,
-      uploader: v.uploader_id ? {
-        id: v.uploader_id,
-        name: v.uploader_name,
-        avatar: v.uploader_avatar,
-      } : null,
-    }));
+const result = await pool.query(`
+  SELECT 
+    v.id, 
+    v.title, 
+    v.description, 
+    v.status,
+    v.processing_progress,
+    v.created_at, 
+    v.views, 
+    v.likes,
+    v.dislikes,
+    v.thumbnail_path,
+    u.id as uploader_id,
+    u.name as uploader_name,
+    u.avatar_url as uploader_avatar
+  FROM videos v
+  LEFT JOIN users u ON v.uploader_id = u.id
+  ORDER BY v.created_at DESC
+`);
+
+const videos = result.rows.map((v) => ({
+  id: v.id,
+  title: v.title,
+  description: v.description,
+  status: v.status,
+  processing_progress: v.processing_progress || 0,
+  created_at: v.created_at,
+  views: v.views || 0,
+  likes: v.likes || 0,
+  dislikes: v.dislikes || 0,
+  thumbnailUrl: getThumbnailUrl(v.id, v.thumbnail_path),
+  uploader: v.uploader_id ? {
+    id: v.uploader_id,
+    name: v.uploader_name,
+    avatar: v.uploader_avatar,
+  } : null,
+}));
     
     res.json(videos);
   } catch (error) {
@@ -75,38 +91,37 @@ router.get("/user/:userId", async (req, res) => {
     
     const user = userResult.rows[0];
     
-    // Get videos by this user
-    const videosResult = await pool.query(`
-      SELECT 
-        v.id, 
-        v.title, 
-        v.description, 
-        v.status, 
-        v.created_at, 
-        v.views, 
-        v.likes,
-        v.dislikes,
-        v.comment_count,
-        v.thumbnail_path
-      FROM videos v
-      WHERE v.uploader_id = $1
-      ORDER BY v.created_at DESC
-    `, [userId]);
+const videosResult = await pool.query(`
+  SELECT 
+    v.id, 
+    v.title, 
+    v.description, 
+    v.status,
+    v.processing_progress,
+    v.created_at, 
+    v.views, 
+    v.likes,
+    v.dislikes,
+    v.comment_count,
+    v.thumbnail_path
+  FROM videos v
+  WHERE v.uploader_id = $1
+  ORDER BY v.created_at DESC
+`, [userId]);
     
-    const videos = videosResult.rows.map((v) => ({
-      id: v.id,
-      title: v.title,
-      description: v.description,
-      status: v.status,
-      created_at: v.created_at,
-      views: v.views || 0,
-      likes: v.likes || 0,
-      dislikes: v.dislikes || 0,
-      commentCount: v.comment_count || 0,
-      thumbnailUrl: v.thumbnail_path
-        ? `http://localhost:8080/thumbs/${v.thumbnail_path}`
-        : null,
-    }));
+const videos = videosResult.rows.map((v) => ({
+  id: v.id,
+  title: v.title,
+  description: v.description,
+  status: v.status,
+  processing_progress: v.processing_progress || 0,
+  created_at: v.created_at,
+  views: v.views || 0,
+  likes: v.likes || 0,
+  dislikes: v.dislikes || 0,
+  commentCount: v.comment_count || 0,
+  thumbnailUrl: getThumbnailUrl(v.id, v.thumbnail_path),
+}));
     
     res.json({
       user: {
@@ -172,9 +187,7 @@ router.get("/:id", async (req, res) => {
         ? `${STORAGE.MEDIA_BASE_URL}/${video.hls_key}`
         : null;
 
-    const thumbnailUrl = video.thumbnail_path
-      ? `http://localhost:8080/thumbs/${video.thumbnail_path}`
-      : null;
+    const thumbnailUrl = getThumbnailUrl(video.id, video.thumbnail_path);
 
     res.json({
       id: video.id,
@@ -547,8 +560,8 @@ router.post("/:id/thumbnail", requireAuth, uploadThumbnail.single("thumbnail"), 
       [newThumbnailFilename, videoId]
     );
 
-    // Delete old thumbnail file if it exists
-    if (oldThumbnailPath) {
+    // Delete old thumbnail file if it exists and it's not the default one
+    if (oldThumbnailPath && oldThumbnailPath !== `${videoId}.jpg`) {
       const oldFilePath = path.join(process.cwd(), "videos", "thumbs", oldThumbnailPath);
       if (fs.existsSync(oldFilePath)) {
         try {
@@ -578,7 +591,7 @@ router.post("/:id/thumbnail", requireAuth, uploadThumbnail.single("thumbnail"), 
   }
 });
 
-// Delete thumbnail (only owner can delete)
+// Delete thumbnail (only owner can delete) - Revert to default FFmpeg thumbnail
 router.delete("/:id/thumbnail", requireAuth, async (req, res) => {
   try {
     const videoId = req.params.id;
@@ -601,31 +614,84 @@ router.delete("/:id/thumbnail", requireAuth, async (req, res) => {
     const thumbnailPath = videoCheck.rows[0].thumbnail_path;
 
     if (!thumbnailPath) {
-      return res.status(404).json({ error: "No thumbnail to delete" });
+      return res.status(404).json({ error: "No custom thumbnail to delete" });
     }
 
-    // Update database - remove thumbnail reference
+    // Check if default FFmpeg thumbnail exists
+    const defaultThumbnailName = `${videoId}.jpg`;
+    const defaultThumbnailPath = path.join(process.cwd(), "videos", "thumbs", defaultThumbnailName);
+    const hasDefaultThumbnail = fs.existsSync(defaultThumbnailPath);
+
+    // Update database - reset to default thumbnail if exists, otherwise set to NULL
+    const newThumbnailPath = hasDefaultThumbnail ? defaultThumbnailName : null;
+    
     await pool.query(
-      "UPDATE videos SET thumbnail_path = NULL, updated_at = now() WHERE id = $1",
-      [videoId]
+      "UPDATE videos SET thumbnail_path = $1, updated_at = now() WHERE id = $2",
+      [newThumbnailPath, videoId]
     );
 
-    // Delete thumbnail file
-    const filePath = path.join(process.cwd(), "videos", "thumbs", thumbnailPath);
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-        console.log(`Deleted thumbnail: ${thumbnailPath}`);
-      } catch (err) {
-        console.error(`Failed to delete thumbnail file: ${err.message}`);
-        // Database is already updated, so continue
+    // Delete custom thumbnail file (not the default one)
+    if (thumbnailPath !== defaultThumbnailName) {
+      const filePath = path.join(process.cwd(), "videos", "thumbs", thumbnailPath);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          console.log(`Deleted custom thumbnail: ${thumbnailPath}`);
+        } catch (err) {
+          console.error(`Failed to delete thumbnail file: ${err.message}`);
+          // Database is already updated, so continue
+        }
       }
     }
 
-    res.json({ message: "Thumbnail deleted successfully" });
+    // Return the new thumbnail URL (either default or null)
+    const thumbnailUrl = getThumbnailUrl(videoId, newThumbnailPath);
+
+    res.json({ 
+      message: hasDefaultThumbnail 
+        ? "Custom thumbnail deleted, reverted to default" 
+        : "Thumbnail deleted successfully",
+      thumbnailUrl: thumbnailUrl
+    });
   } catch (error) {
     console.error("Error deleting thumbnail:", error);
     res.status(500).json({ error: "Failed to delete thumbnail" });
+  }
+});
+
+// Get video processing status (only for owner)
+router.get("/:id/status", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const result = await pool.query(
+      `SELECT v.status, v.processing_progress, v.uploader_id, v.title
+       FROM videos v
+       WHERE v.id = $1`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    const video = result.rows[0];
+
+    // Only owner can check processing status
+    if (video.uploader_id !== userId) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    res.json({
+      id: id,
+      title: video.title,
+      status: video.status,
+      progress: video.processing_progress || 0,
+    });
+  } catch (error) {
+    console.error("Error fetching video status:", error);
+    res.status(500).json({ error: "Failed to fetch video status" });
   }
 });
 

@@ -2,8 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faSave, faImage, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { API_ENDPOINTS } from "../../config/api";
 
-export default function VideoEditModal({ isOpen, onClose, onSave, video, onThumbnailUpdate }) {
+export default function VideoEditModal({ isOpen, onClose, onSave, video, onThumbnailUpdate, onThumbnailDelete }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState(null);
@@ -49,11 +50,35 @@ export default function VideoEditModal({ isOpen, onClose, onSave, video, onThumb
     setError(null);
   };
 
-  const handleRemoveThumbnail = () => {
-    setThumbnailFile(null);
-    setThumbnailPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const handleRemoveThumbnail = async () => {
+    if (!video?.id || !onThumbnailDelete) {
+      // Fallback to local state update only
+      setThumbnailFile(null);
+      setThumbnailPreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+    
+    try {
+      setUploadingThumbnail(true);
+      setError(null);
+      
+      // Call the parent's thumbnail delete handler
+      const data = await onThumbnailDelete(video.id);
+      
+      // Update preview with the default thumbnail or null
+      setThumbnailPreview(data.thumbnailUrl || null);
+      setThumbnailFile(null);
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (err) {
+      setError(err.message || "Failed to remove thumbnail");
+    } finally {
+      setUploadingThumbnail(false);
     }
   };
 
@@ -148,7 +173,8 @@ export default function VideoEditModal({ isOpen, onClose, onSave, video, onThumb
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition"
+                    disabled={uploadingThumbnail}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FontAwesomeIcon icon={faImage} className="mr-2" />
                     Change
@@ -156,10 +182,11 @@ export default function VideoEditModal({ isOpen, onClose, onSave, video, onThumb
                   <button
                     type="button"
                     onClick={handleRemoveThumbnail}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition"
+                    disabled={uploadingThumbnail}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FontAwesomeIcon icon={faTrash} className="mr-2" />
-                    Remove
+                    {uploadingThumbnail ? "Removing..." : "Remove"}
                   </button>
                 </div>
               </div>
