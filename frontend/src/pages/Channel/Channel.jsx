@@ -239,24 +239,24 @@ export default function Channel() {
       />
 
       <main className="min-h-screen bg-neutral-50 dark:bg-[#0f0f0f] text-neutral-900 dark:text-neutral-100">
-        <div className="max-w-[1600px] mx-auto px-6 py-8">
+        <div className="max-w-[90rem] mx-auto px-4 sm:px-6 py-6 sm:py-8">
           {/* Channel Header */}
-          <div className="mb-8 pb-6 border-b border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
+          <div className="mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto">
                 <img
                   src={channelUser.avatar}
                   alt={channelUser.name}
-                  className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-800 shadow-lg"
+                  className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 sm:border-4 border-white dark:border-neutral-800 shadow-lg flex-shrink-0"
                 />
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">{channelUser.name}</h1>
-                  <p className="text-neutral-600 dark:text-neutral-400 mb-2">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2 truncate">{channelUser.name}</h1>
+                  <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 mb-1 sm:mb-2">
                     {readyVideos.length}{" "}
                     {readyVideos.length === 1 ? "video" : "videos"}
                   </p>
                   {isOwnChannel && (
-                    <p className="text-sm text-indigo-600 dark:text-indigo-400">
+                    <p className="text-xs sm:text-sm text-indigo-600 dark:text-indigo-400">
                       Your Channel
                     </p>
                   )}
@@ -264,7 +264,7 @@ export default function Channel() {
               </div>
               
               {/* Follow Button and Settings */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <FollowButton
                   userId={userId}
                   initialFollowerCount={channelUser.followerCount}
@@ -327,7 +327,10 @@ export default function Channel() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div 
+              className="grid gap-4 sm:gap-6"
+              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(16rem, 1fr))' }}
+            >
               {readyVideos.map((video) => {
                 const likePercentage =
                   video.likes + video.dislikes > 0

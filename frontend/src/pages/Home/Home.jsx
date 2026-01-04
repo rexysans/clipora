@@ -60,10 +60,10 @@ export default function Home() {
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans">
       <Navbar />
 
-      <main className="max-w-[1200px] mx-auto px-6 py-10">
+      <main className="max-w-[90rem] mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold tracking-tight">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold tracking-tight">
             Recommended
           </h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
@@ -71,16 +71,14 @@ export default function Home() {
           </p>
         </div>
 
-        {/* EXACT YouTube grid */}
+        {/* CSS Grid with auto-fit for fluid responsiveness */}
         <div
           className="
-            grid
-            grid-cols-1
-            md:grid-cols-2
-            lg:grid-cols-3
-            gap-x-6
-            gap-y-12
+            grid gap-x-4 gap-y-8
+            sm:gap-x-6 sm:gap-y-10
+            lg:gap-x-6 lg:gap-y-12
           "
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(16rem, 1fr))' }}
         >
           {readyVideos.map((video) => (
             <article key={video.id}>

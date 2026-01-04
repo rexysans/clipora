@@ -651,10 +651,10 @@ const handleThumbnailDelete = async (videoId) => {
 />
 
       <div className="flex flex-col items-center bg-neutral-50 dark:bg-[#0f0f0f] min-h-screen w-full text-neutral-900 dark:text-neutral-100">
-        <div className="w-full max-w-6xl flex flex-col md:flex-row gap-8 mt-8 px-4">
+        <div className="w-full max-w-[90rem] flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 mt-4 sm:mt-6 lg:mt-8 px-4 sm:px-6">
           {/* Video Section */}
-          <div className="flex-1 flex flex-col">
-            <div className="rounded-xl overflow-hidden bg-black shadow-lg">
+          <div className="flex-1 flex flex-col min-w-0">
+            <div className="rounded-lg sm:rounded-xl overflow-hidden bg-black shadow-lg aspect-video">
               <VideoPlayer
                 options={videoPlayerOptions}
                 onReady={handlePlayerReady}
@@ -662,9 +662,9 @@ const handleThumbnailDelete = async (videoId) => {
             </div>
 
             {/* Video Info */}
-            <div className="mt-6 bg-neutral-100 dark:bg-[#181818] rounded-xl p-6 shadow-md">
+            <div className="mt-4 sm:mt-6 bg-neutral-100 dark:bg-[#181818] rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-md">
               {error ? (
-                <p className="text-red-500 font-semibold">{error}</p>
+                <p className="text-red-500 font-semibold text-sm sm:text-base">{error}</p>
               ) : (
                 <>
                   {/* Title and Menu */}

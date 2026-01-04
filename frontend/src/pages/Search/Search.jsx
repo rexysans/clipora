@@ -59,12 +59,12 @@ export default function Search() {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-[#0f0f0f]">
       <Navbar />
-      <div className="max-w-[1400px] mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
+      <div className="max-w-[90rem] mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
             Search results for "{query}"
           </h1>
-          <p className="text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
             {results.videos.length + results.channels.length} results
           </p>
         </div>

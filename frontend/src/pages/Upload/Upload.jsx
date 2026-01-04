@@ -175,14 +175,14 @@ export default function Upload() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-neutral-50 dark:bg-[#0f0f0f] py-8 px-4">
+      <div className="min-h-screen bg-neutral-50 dark:bg-[#0f0f0f] py-6 sm:py-8 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
               Upload Video
             </h1>
-            <p className="text-neutral-600 dark:text-neutral-400">
+            <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
               Share your content with the world
             </p>
           </div>
