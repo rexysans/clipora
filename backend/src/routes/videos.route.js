@@ -975,4 +975,63 @@ router.get("/liked/:userId", requireAuth, async (req, res) => {
   }
 });
 
+// Get watch history for a user
+router.get("/history/:userId", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Verify the user is requesting their own history
+    if (req.user.id !== userId) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        v.id, 
+        v.title, 
+        v.description, 
+        v.status,
+        v.processing_progress,
+        v.created_at, 
+        v.views, 
+        v.likes,
+        v.dislikes,
+        v.thumbnail_path,
+        vv.viewed_at,
+        u.id as uploader_id,
+        u.name as uploader_name,
+        u.avatar_url as uploader_avatar
+      FROM video_views vv
+      INNER JOIN videos v ON vv.video_id = v.id
+      LEFT JOIN users u ON v.uploader_id = u.id
+      WHERE vv.user_id = $1
+      ORDER BY vv.viewed_at DESC
+    `, [userId]);
+
+    const videos = result.rows.map((v) => ({
+      id: v.id,
+      title: v.title,
+      description: v.description,
+      status: v.status,
+      processing_progress: v.processing_progress || 0,
+      created_at: v.created_at,
+      viewed_at: v.viewed_at,
+      views: v.views || 0,
+      likes: v.likes || 0,
+      dislikes: v.dislikes || 0,
+      thumbnailUrl: getThumbnailUrl(v.id, v.thumbnail_path),
+      uploader: v.uploader_id ? {
+        id: v.uploader_id,
+        name: v.uploader_name,
+        avatar: v.uploader_avatar,
+      } : null,
+    }));
+    
+    res.json(videos);
+  } catch (error) {
+    console.error("Error fetching watch history:", error);
+    res.status(500).json({ error: "Failed to fetch watch history" });
+  }
+});
+
 export default router;
