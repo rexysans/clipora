@@ -9,8 +9,9 @@ import Layout from './Layout';
 const Home = lazy(() => import('../pages/Home/Home'));
 const Watch = lazy(() => import('../pages/Watch/Watch'));
 const Upload = lazy(() => import('../pages/Upload/Upload'));
-const Channel = lazy(() => import('../pages/Channel/Channel'));  // NEW
+const Channel = lazy(() => import('../pages/Channel/Channel'));
 const Search = lazy(() => import('../pages/Search/Search'));
+const Following = lazy(() => import('../pages/Following/Following'));
 const Login = lazy(() => import('../pages/Login/Login'));
 const Signup = lazy(() => import('../pages/Signup/Signup'));
 const NotFound = lazy(() => import('../pages/NotFound/NotFound'));
@@ -77,6 +78,16 @@ export const router = createBrowserRouter([
           <Suspense fallback={<LoadingFallback />}>
             <ProtectedRoute>
               <Search />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'following',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <Following />
             </ProtectedRoute>
           </Suspense>
         ),
