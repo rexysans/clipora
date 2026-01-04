@@ -1,14 +1,14 @@
 import { useState, useRef } from "react";
 import Navbar from "../../components/Navbar/Navbar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCloudArrowUp, faVideo, faCheckCircle, faImage, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { API_ENDPOINTS } from "../../config/api";
-import { useAuth } from "../../app/AuthContext";
 
 export default function Upload() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const location = useLocation();
+  const from = location.state?.from || "/";
   const thumbnailInputRef = useRef(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -161,13 +161,9 @@ export default function Upload() {
       setFormData({ title: "", description: "", video: null, thumbnail: null });
       setThumbnailPreview(null);
       
-      // Redirect to channel page after 1.5 seconds to see processing
+      // Redirect back to previous page after 1.5 seconds
       setTimeout(() => {
-        if (user?.id) {
-          navigate(`/channel/${user.id}`);
-        } else {
-          navigate("/");
-        }
+        navigate(from, { replace: true });
       }, 1500);
     } catch (err) {
       setError(err.message || "Failed to upload video");
@@ -374,7 +370,7 @@ export default function Upload() {
                   ✅ Video uploaded successfully!
                 </p>
                 <p className="text-green-600 dark:text-green-400 text-xs">
-                  Redirecting to your channel to see processing progress...
+                  Redirecting you back...
                 </p>
               </div>
             )}

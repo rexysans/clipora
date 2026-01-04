@@ -293,6 +293,17 @@ async function finalizeJob(id, exitCode, thumbnailPath) {
       // Set progress to 95% before thumbnail generation
       await updateProgress(id, 95);
       
+      // Check if a custom thumbnail was already uploaded
+      const existingResult = await c.query(
+        "SELECT thumbnail_path FROM videos WHERE id = $1",
+        [id]
+      );
+      
+      const existingThumbnail = existingResult.rows[0]?.thumbnail_path;
+      
+      // Only use the default thumbnail if no custom thumbnail exists
+      const finalThumbnailPath = existingThumbnail || thumbnailPath;
+      
       await c.query(
         `UPDATE videos
          SET status = 'ready',
@@ -301,9 +312,9 @@ async function finalizeJob(id, exitCode, thumbnailPath) {
              processing_progress = 100,
              claimed_at = NULL
          WHERE id = $1`,
-        [id, hlsKey, thumbnailPath]
+        [id, hlsKey, finalThumbnailPath]
       );
-      log("READY", `Video ${id} is READY`);
+      log("READY", `Video ${id} is READY (thumbnail: ${finalThumbnailPath})`);
     } else {
       await c.query(
         `UPDATE videos

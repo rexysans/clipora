@@ -1,5 +1,5 @@
 // frontend/src/components/Navbar/Navbar.jsx
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSun, faMoon, faRightFromBracket, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "../../app/ThemeContext";
@@ -9,6 +9,7 @@ export default function Navbar() {
   const { dark, setDark } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
@@ -41,6 +42,7 @@ export default function Navbar() {
               {/* Upload Button */}
               <Link
                 to="/upload"
+                state={{ from: location.pathname }}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 
                   text-white font-semibold rounded-lg transition-colors"
               >

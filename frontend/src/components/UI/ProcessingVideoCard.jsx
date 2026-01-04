@@ -8,10 +8,7 @@ export default function ProcessingVideoCard({ video }) {
   const [progress, setProgress] = useState(video.processing_progress || 0);
 
   useEffect(() => {
-    // Poll for both uploaded (queued) and processing status
-    if (status === "uploaded" || status === "processing") {
-      console.log(`[ProcessingVideoCard] Starting polling for video ${video.id} with status: ${status}, progress: ${progress}`);
-      
+    if (status === "processing") {
       const interval = setInterval(async () => {
         try {
           const res = await fetch(API_ENDPOINTS.VIDEO_STATUS(video.id), {
@@ -19,31 +16,24 @@ export default function ProcessingVideoCard({ video }) {
           });
           if (res.ok) {
             const data = await res.json();
-            console.log(`[ProcessingVideoCard] Polling update for ${video.id}:`, data);
             setStatus(data.status);
             setProgress(data.progress);
 
             // Stop polling when ready or failed
             if (data.status === "ready" || data.status === "failed") {
-              console.log(`[ProcessingVideoCard] Video ${video.id} finished with status: ${data.status}`);
               clearInterval(interval);
               // Reload page after completion
               if (data.status === "ready") {
                 setTimeout(() => window.location.reload(), 1000);
               }
             }
-          } else {
-            console.error(`[ProcessingVideoCard] Failed to fetch status: ${res.status}`);
           }
         } catch (err) {
-          console.error("[ProcessingVideoCard] Failed to fetch status:", err);
+          console.error("Failed to fetch status:", err);
         }
       }, 2000); // Poll every 2 seconds
 
-      return () => {
-        console.log(`[ProcessingVideoCard] Stopping polling for video ${video.id}`);
-        clearInterval(interval);
-      };
+      return () => clearInterval(interval);
     }
   }, [video.id, status]);
 
