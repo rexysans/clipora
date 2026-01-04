@@ -151,17 +151,17 @@ function Liked() {
           ) : (
             <div
               className="
-                grid gap-x-4 gap-y-8
+                grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
+                gap-x-4 gap-y-8
                 sm:gap-x-6 sm:gap-y-10
-                lg:gap-x-6 lg:gap-y-12
+                lg:gap-x-8 lg:gap-y-12
               "
-              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(16rem, 1fr))' }}
             >
               {videos.map((video) => (
                 <article key={video.id}>
                   {/* Thumbnail */}
                   <Link to={`/watch/${video.id}`} className="group block">
-                    <div className="relative aspect-video rounded-xl overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-sm group-hover:shadow-lg transition">
+                    <div className="relative aspect-video xl:aspect-[16/10] rounded-xl overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-sm group-hover:shadow-lg transition">
                       {video.thumbnailUrl ? (
                         <img
                           src={video.thumbnailUrl}
