@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -7,13 +6,10 @@ import {
   faHistory,
   faClock,
   faUserFriends,
-  faBars,
-  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../../app/AuthContext";
 
 function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const { user } = useAuth();
 
@@ -31,7 +27,7 @@ function Sidebar() {
     },
     {
       icon: faHeart,
-      label: "Liked Videos",
+      label: "Liked",
       path: "/liked",
       requireAuth: true,
     },
@@ -57,40 +53,22 @@ function Sidebar() {
 
   return (
     <>
-      {/* Mobile Hamburger Button - Fixed position */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-20 left-4 z-50 w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-100 dark:bg-surface hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white transition-colors shadow-lg"
-        aria-label="Toggle sidebar"
-      >
-        <FontAwesomeIcon icon={isOpen ? faTimes : faBars} />
-      </button>
-
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Desktop Sidebar - Left side */}
       <aside
-        className={`
-          fixed lg:sticky top-0 left-0 h-screen bg-white dark:bg-surface border-r border-neutral-200 dark:border-neutral-800 z-40
-          transition-transform duration-300 ease-in-out
-          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-          w-64 flex-shrink-0
-        `}
+        className="
+          hidden lg:block
+          sticky top-0 h-screen w-64 flex-shrink-0
+          bg-white dark:bg-surface 
+          border-r border-neutral-200 dark:border-neutral-800
+          overflow-y-auto
+        "
       >
-        <div className="flex flex-col h-full pt-20 lg:pt-24">
-          {/* Menu Items */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <div className="flex flex-col h-full pt-24">
+          <nav className="flex-1 px-3 py-4 space-y-1">
             {filteredItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => setIsOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium
                   ${
@@ -110,11 +88,10 @@ function Sidebar() {
           {!user && (
             <div className="px-3 py-4 border-t border-neutral-200 dark:border-neutral-800">
               <p className="text-sm text-neutral-600 dark:text-textSecondary mb-3 px-4">
-                Sign in to like videos, comment, and subscribe.
+                Sign in to access more features
               </p>
               <Link
                 to="/login"
-                onClick={() => setIsOpen(false)}
                 className="block w-full px-4 py-2 text-center bg-accent hover:bg-accentSoft text-white font-semibold rounded-lg transition-colors"
               >
                 Sign In
@@ -123,6 +100,42 @@ function Sidebar() {
           )}
         </div>
       </aside>
+
+      {/* Mobile Bottom Navigation - Bottom of screen */}
+      <nav
+        className="
+          lg:hidden
+          fixed bottom-0 left-0 right-0 z-40
+          bg-white dark:bg-surface 
+          border-t border-neutral-200 dark:border-neutral-800
+          px-2 py-2
+        "
+      >
+        <div className="flex items-center justify-around max-w-lg mx-auto">
+          {filteredItems.slice(0, 5).map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`
+                flex flex-col items-center justify-center
+                px-3 py-2 rounded-lg
+                transition-all min-w-[60px]
+                ${
+                  isActive(item.path)
+                    ? "text-accent"
+                    : "text-neutral-600 dark:text-neutral-400"
+                }
+              `}
+            >
+              <FontAwesomeIcon 
+                icon={item.icon} 
+                className={`text-xl mb-1 ${isActive(item.path) ? "text-accent" : ""}`}
+              />
+              <span className="text-[10px] font-medium truncate max-w-[60px]">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
     </>
   );
 }

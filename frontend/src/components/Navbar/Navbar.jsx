@@ -26,7 +26,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-10 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0f0f0f]">
+    <header className="sticky top-0 z-50 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0f0f0f]">
       <div className="max-w-[90rem] mx-auto px-4 sm:px-6 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
         <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
           {/* Video Play Icon SVG */}
