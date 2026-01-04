@@ -557,20 +557,71 @@ const handleThumbnailDelete = async (videoId) => {
 
   const handlePlayerReady = async (player) => {
     playerRef.current = player;
-    const userId = getAnonymousUserId();
+    // Use authenticated user ID if logged in, otherwise use anonymous ID
+    const userId = user?.id || getAnonymousUserId();
 
+    // Function to save progress
+    const saveProgress = () => {
+      if (!player || player.isDisposed()) return;
+      const currentTime = player.currentTime();
+      if (currentTime > 0) {
+        fetch(API_ENDPOINTS.PROGRESS, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            videoId,
+            userId,
+            lastTime: currentTime,
+          }),
+        }).catch(() => {});
+      }
+    };
+
+    // Fetch saved progress
+    let savedProgress = 0;
     try {
       const res = await fetch(
         API_ENDPOINTS.PROGRESS_BY_VIDEO_USER(videoId, userId)
       );
       if (res.ok) {
         const data = await res.json();
-        if (data.progress_seconds > 0) {
-          player.currentTime(data.progress_seconds);
-        }
+        console.log('[Progress] Fetched from backend:', data);
+        savedProgress = data.lastTime || 0;
       }
     } catch (err) {
       console.error("Failed to restore progress:", err);
+    }
+
+    // If there's saved progress, seek to it when the stream is ready
+    if (savedProgress > 0) {
+      console.log('[Progress] Will seek to:', savedProgress);
+      
+      const trySeek = () => {
+        try {
+          const duration = player.duration();
+          console.log('[Progress] Duration:', duration, 'Seeking to:', savedProgress);
+          
+          if (duration && duration > savedProgress) {
+            player.currentTime(savedProgress);
+            console.log('[Progress] Successfully seeked to:', savedProgress);
+          } else {
+            console.log('[Progress] Cannot seek - duration not ready or invalid');
+          }
+        } catch (e) {
+          console.error('[Progress] Seek failed:', e);
+        }
+      };
+
+      // Try multiple events to ensure we catch when the stream is ready
+      if (player.readyState() >= 3) {
+        // HAVE_FUTURE_DATA or better - can seek
+        setTimeout(trySeek, 100);
+      } else {
+        // Wait for the player to have enough data
+        player.one('canplay', () => {
+          setTimeout(trySeek, 100);
+        });
+      }
     }
 
     let progressInterval;
@@ -579,22 +630,19 @@ const handleThumbnailDelete = async (videoId) => {
       startViewTracking();
 
       progressInterval = setInterval(() => {
-        const currentTime = player.currentTime();
-        fetch(API_ENDPOINTS.PROGRESS, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            videoId,
-            userId,
-            progressSeconds: currentTime,
-          }),
-        }).catch(() => {});
+        if (!player || player.isDisposed()) {
+          clearInterval(progressInterval);
+          return;
+        }
+        saveProgress();
       }, 5000);
     });
 
     player.on("pause", () => {
       cancelViewTracking();
       clearInterval(progressInterval);
+      // Save progress immediately when paused
+      saveProgress();
     });
 
     player.on("seeking", () => {
@@ -604,14 +652,92 @@ const handleThumbnailDelete = async (videoId) => {
     player.on("dispose", () => {
       clearInterval(progressInterval);
       cancelViewTracking();
+      // Save progress immediately before player is disposed
+      saveProgress();
     });
+
+    // Save progress when user leaves the page
+    const handleBeforeUnload = () => {
+      saveProgress();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup function to remove event listener
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      saveProgress();
+    };
   };
+
+  // Handle progress restoration when videoId changes (e.g., clicking recommended videos)
+  useEffect(() => {
+    const restoreProgress = async () => {
+      if (!playerRef.current || playerRef.current.isDisposed()) return;
+      
+      const player = playerRef.current;
+      const userId = user?.id || getAnonymousUserId();
+
+      try {
+        const res = await fetch(
+          API_ENDPOINTS.PROGRESS_BY_VIDEO_USER(videoId, userId)
+        );
+        if (res.ok) {
+          const data = await res.json();
+          console.log('[Progress] Restored on videoId change:', data);
+          
+          if (data.lastTime > 0) {
+            const trySeek = () => {
+              try {
+                const duration = player.duration();
+                if (duration && duration > data.lastTime) {
+                  player.currentTime(data.lastTime);
+                  console.log('[Progress] Seeked to:', data.lastTime);
+                }
+              } catch (e) {
+                console.error('[Progress] Seek failed:', e);
+              }
+            };
+
+            if (player.readyState() >= 3) {
+              setTimeout(trySeek, 100);
+            } else {
+              player.one('canplay', () => {
+                setTimeout(trySeek, 100);
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to restore progress:", err);
+      }
+    };
+
+    // Small delay to ensure player has loaded the new source
+    const timer = setTimeout(restoreProgress, 200);
+    return () => clearTimeout(timer);
+  }, [videoId, user]);
 
   useEffect(() => {
     return () => {
       cancelViewTracking();
+      // Save progress when component unmounts (e.g., navigating to another video)
+      if (playerRef.current && !playerRef.current.isDisposed()) {
+        const userId = user?.id || getAnonymousUserId();
+        const currentTime = playerRef.current.currentTime();
+        if (currentTime > 0) {
+          fetch(API_ENDPOINTS.PROGRESS, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              videoId,
+              userId,
+              lastTime: currentTime,
+            }),
+          }).catch(() => {});
+        }
+      }
     };
-  }, []);
+  }, [videoId, user]);
 
   return (
     <>
@@ -654,7 +780,7 @@ const handleThumbnailDelete = async (videoId) => {
         <div className="w-full max-w-[90rem] flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 mt-4 sm:mt-6 lg:mt-8 px-4 sm:px-6">
           {/* Video Section */}
           <div className="flex-1 flex flex-col min-w-0">
-            <div className="rounded-lg sm:rounded-xl overflow-hidden bg-black shadow-lg">
+            <div className="rounded-lg sm:rounded-xl overflow-hidden bg-black shadow-lg aspect-video">
               <VideoPlayer
                 options={videoPlayerOptions}
                 onReady={handlePlayerReady}
