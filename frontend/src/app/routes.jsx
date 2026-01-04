@@ -14,6 +14,7 @@ const Search = lazy(() => import('../pages/Search/Search'));
 const Following = lazy(() => import('../pages/Following/Following'));
 const Liked = lazy(() => import('../pages/Liked/Liked'));
 const History = lazy(() => import('../pages/History/History'));
+const WatchLater = lazy(() => import('../pages/WatchLater/WatchLater'));
 const Login = lazy(() => import('../pages/Login/Login'));
 const Signup = lazy(() => import('../pages/Signup/Signup'));
 const NotFound = lazy(() => import('../pages/NotFound/NotFound'));
@@ -110,6 +111,16 @@ export const router = createBrowserRouter([
           <Suspense fallback={<LoadingFallback />}>
             <ProtectedRoute>
               <History />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'watch-later',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <WatchLater />
             </ProtectedRoute>
           </Suspense>
         ),

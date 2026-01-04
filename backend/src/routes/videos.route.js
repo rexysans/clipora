@@ -1034,4 +1034,128 @@ router.get("/history/:userId", requireAuth, async (req, res) => {
   }
 });
 
+// Get watch later videos for a user
+router.get("/watch-later/:userId", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Verify the user is requesting their own watch later list
+    if (req.user.id !== userId) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        v.id, 
+        v.title, 
+        v.description, 
+        v.status,
+        v.processing_progress,
+        v.created_at, 
+        v.views, 
+        v.likes,
+        v.dislikes,
+        v.thumbnail_path,
+        wl.added_at,
+        u.id as uploader_id,
+        u.name as uploader_name,
+        u.avatar_url as uploader_avatar
+      FROM watch_later wl
+      INNER JOIN videos v ON wl.video_id = v.id
+      LEFT JOIN users u ON v.uploader_id = u.id
+      WHERE wl.user_id = $1
+      ORDER BY wl.added_at DESC
+    `, [userId]);
+
+    const videos = result.rows.map((v) => ({
+      id: v.id,
+      title: v.title,
+      description: v.description,
+      status: v.status,
+      processing_progress: v.processing_progress || 0,
+      created_at: v.created_at,
+      added_at: v.added_at,
+      views: v.views || 0,
+      likes: v.likes || 0,
+      dislikes: v.dislikes || 0,
+      thumbnailUrl: getThumbnailUrl(v.id, v.thumbnail_path),
+      uploader: v.uploader_id ? {
+        id: v.uploader_id,
+        name: v.uploader_name,
+        avatar: v.uploader_avatar,
+      } : null,
+    }));
+    
+    res.json(videos);
+  } catch (error) {
+    console.error("Error fetching watch later:", error);
+    res.status(500).json({ error: "Failed to fetch watch later" });
+  }
+});
+
+// Add video to watch later
+router.post("/:id/watch-later", requireAuth, async (req, res) => {
+  try {
+    const { id: videoId } = req.params;
+    const userId = req.user.id;
+
+    // Check if already in watch later
+    const existing = await pool.query(
+      "SELECT 1 FROM watch_later WHERE user_id = $1 AND video_id = $2",
+      [userId, videoId]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(200).json({ message: "Already in watch later" });
+    }
+
+    // Add to watch later
+    await pool.query(
+      "INSERT INTO watch_later (user_id, video_id) VALUES ($1, $2)",
+      [userId, videoId]
+    );
+
+    res.json({ message: "Added to watch later" });
+  } catch (error) {
+    console.error("Error adding to watch later:", error);
+    res.status(500).json({ error: "Failed to add to watch later" });
+  }
+});
+
+// Remove video from watch later
+router.delete("/:id/watch-later", requireAuth, async (req, res) => {
+  try {
+    const { id: videoId } = req.params;
+    const userId = req.user.id;
+
+    await pool.query(
+      "DELETE FROM watch_later WHERE user_id = $1 AND video_id = $2",
+      [userId, videoId]
+    );
+
+    res.json({ message: "Removed from watch later" });
+  } catch (error) {
+    console.error("Error removing from watch later:", error);
+    res.status(500).json({ error: "Failed to remove from watch later" });
+  }
+});
+
+// Check if video is in watch later
+router.get("/:id/watch-later-status", requireAuth, async (req, res) => {
+  try {
+    const { id: videoId } = req.params;
+    const userId = req.user.id;
+
+    const result = await pool.query(
+      "SELECT 1 FROM watch_later WHERE user_id = $1 AND video_id = $2",
+      [userId, videoId]
+    );
+
+    res.json({ inWatchLater: result.rows.length > 0 });
+  } catch (error) {
+    console.error("Error checking watch later status:", error);
+    res.status(500).json({ error: "Failed to check watch later status" });
+  }
+});
+
 export default router;

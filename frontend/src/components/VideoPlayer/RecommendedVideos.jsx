@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import WatchLaterButton from "../UI/WatchLaterButton";
 
 export default function RecommendedVideos({ videos, currentVideoId }) {
   const navigate = useNavigate();
@@ -69,7 +70,13 @@ export default function RecommendedVideos({ videos, currentVideoId }) {
                   className="flex gap-3 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg p-2 transition cursor-pointer"
                 >
                   {/* Thumbnail */}
-                  <div className="w-52 h-32 bg-neutral-300 dark:bg-neutral-700 rounded-lg overflow-hidden flex-shrink-0">
+                  <div className="relative w-52 h-32 bg-neutral-300 dark:bg-neutral-700 rounded-lg overflow-hidden flex-shrink-0">
+                    {/* Watch Later Button */}
+                    <WatchLaterButton 
+                      videoId={video.id} 
+                      className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100"
+                    />
+                    
                     {video.thumbnailUrl ? (
                       <img
                         src={video.thumbnailUrl}

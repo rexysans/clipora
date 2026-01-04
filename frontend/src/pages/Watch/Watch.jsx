@@ -17,6 +17,7 @@ import VideoEditModal from "../../components/UI/VideoEditModal";
 import RecommendedVideos from "../../components/VideoPlayer/RecommendedVideos";
 import CommentSection from "../../components/Comments/CommentSection";
 import FollowButton from "../../components/UI/FollowButton";
+import WatchLaterButton from "../../components/UI/WatchLaterButton";
 
 const VIEW_THRESHOLD = 5; // 5 seconds - reasonable for both short and long videos
 
@@ -868,13 +869,13 @@ const handleThumbnailDelete = async (videoId) => {
                       </span>
                     </div>
 
-                    {/* Like/Dislike Buttons */}
+                    {/* Like/Dislike/Watch Later Buttons */}
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleReaction("like")}
                         className={`flex items-center gap-2 px-4 py-2 rounded-full border transition ${
                           videoData.userReaction === "like"
-                            ? "bg-indigo-600 text-white border-indigo-600"
+                            ? "bg-accent text-white border-accent"
                             : "bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-700"
                         }`}
                       >
@@ -897,6 +898,11 @@ const handleThumbnailDelete = async (videoId) => {
                           {formatCount(videoData.dislikes)}
                         </span>
                       </button>
+                      
+                      <WatchLaterButton 
+                        videoId={videoId} 
+                        className="w-10 h-10 bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-700"
+                      />
                     </div>
                   </div>
 

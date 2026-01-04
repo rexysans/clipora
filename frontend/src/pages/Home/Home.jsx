@@ -4,6 +4,7 @@ import Navbar from "../../components/Navbar/Navbar";
 import { API_ENDPOINTS } from "../../config/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import WatchLaterButton from "../../components/UI/WatchLaterButton";
 
 export default function Home() {
   const [videos, setVideos] = useState([]);
@@ -83,7 +84,13 @@ export default function Home() {
           {readyVideos.map((video) => (
             <article key={video.id}>
               {/* Thumbnail - Link to video */}
-              <Link to={`/watch/${video.id}`} className="group block">
+              <Link to={`/watch/${video.id}`} className="group block relative">
+                {/* Watch Later Button */}
+                <WatchLaterButton 
+                  videoId={video.id} 
+                  className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100"
+                />
+                
                 <div
                   className="
                     relative aspect-video rounded-xl overflow-hidden
