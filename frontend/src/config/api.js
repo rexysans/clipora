@@ -25,4 +25,6 @@ export const API_ENDPOINTS = {
   USER_FOLLOWERS: (userId) => `${API_BASE_URL}/users/${userId}/followers`,
   USER_FOLLOWING: (userId) => `${API_BASE_URL}/users/${userId}/following`,
   USER_FOLLOWER_NAME: `${API_BASE_URL}/users/follower-name`,
+  // Search
+  SEARCH: `${API_BASE_URL}/search`,
 };

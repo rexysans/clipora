@@ -1,25 +1,34 @@
 // frontend/src/components/Navbar/Navbar.jsx
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSun, faMoon, faRightFromBracket, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { faSun, faMoon, faRightFromBracket, faCloudArrowUp, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "../../app/ThemeContext";
 import { useAuth } from "../../app/AuthContext";
+import { useState } from "react";
 
 export default function Navbar() {
   const { dark, setDark } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleLogout = async () => {
     await logout();
     navigate("/login");
   };
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0f0f0f]">
-      <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group">
+      <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between gap-4">
+        <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
           {/* Video Play Icon SVG */}
           <svg
             className="w-8 h-8 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform"
@@ -27,7 +36,7 @@ export default function Navbar() {
             fill="currentColor"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" opacity="0.2"/>
+            <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3C7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" opacity="0.2"/>
             <path d="M10 8.5L15.5 12L10 15.5V8.5Z" />
           </svg>
           
@@ -36,7 +45,30 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-3">
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search videos and channels..."
+              className="w-full px-4 py-2 pr-12 rounded-full border border-neutral-300 dark:border-neutral-700 
+                bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100
+                placeholder-neutral-500 dark:placeholder-neutral-400
+                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+            <button
+              type="submit"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center
+                text-neutral-600 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+              <FontAwesomeIcon icon={faSearch} />
+            </button>
+          </div>
+        </form>
+
+        <div className="flex items-center gap-3 flex-shrink-0">
           {user && (
             <>
               {/* Upload Button */}

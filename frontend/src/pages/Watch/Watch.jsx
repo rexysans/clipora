@@ -90,8 +90,6 @@ function Watch() {
 
         const res = await fetch(url);
         const data = await res.json();
-        console.log('Video data received:', data);
-        console.log('Uploader data:', data.uploader);
         setVideoData({
           title: data.title,
           description: data.description || "",

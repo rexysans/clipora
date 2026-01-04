@@ -9,6 +9,7 @@ const Home = lazy(() => import('../pages/Home/Home'));
 const Watch = lazy(() => import('../pages/Watch/Watch'));
 const Upload = lazy(() => import('../pages/Upload/Upload'));
 const Channel = lazy(() => import('../pages/Channel/Channel'));  // NEW
+const Search = lazy(() => import('../pages/Search/Search'));
 const Login = lazy(() => import('../pages/Login/Login'));
 const Signup = lazy(() => import('../pages/Signup/Signup'));
 const NotFound = lazy(() => import('../pages/NotFound/NotFound'));
@@ -63,6 +64,17 @@ export const router = createBrowserRouter([
       <Suspense fallback={<LoadingFallback />}>
         <ProtectedRoute>
           <Channel />
+        </ProtectedRoute>
+      </Suspense>
+    ),
+    errorElement: <ErrorElement />
+  },
+  {
+    path: '/search',
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <ProtectedRoute>
+          <Search />
         </ProtectedRoute>
       </Suspense>
     ),

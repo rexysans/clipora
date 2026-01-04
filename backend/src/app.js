@@ -10,6 +10,7 @@ import videoRoute from "./routes/videos.route.js";
 import progressRouter from "./routes/progress.route.js";
 import authRoute from "./routes/auth.route.js";
 import followersRoute from "./routes/followers.route.js";
+import searchRoute from "./routes/search.route.js";
 
 const app = express();
 
@@ -29,5 +30,6 @@ app.use("/videos", videoRoute);
 app.use("/progress", progressRouter);
 app.use("/auth", authRoute);
 app.use("/users", followersRoute);
+app.use("/search", searchRoute);
 
 export default app;
