@@ -15,6 +15,38 @@
   background: rgba(120, 0, 0, 0.7);
 }
 
+/* --- VIDEO PLAYER SIZING --- */
+.video-js {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Ensure controls are visible and properly sized on all devices */
+.vjs-control-bar {
+  display: flex !important;
+  font-size: 14px; /* Base size for mobile */
+}
+
+@media (min-width: 640px) {
+  .vjs-control-bar {
+    font-size: 16px; /* Slightly larger on tablets */
+  }
+}
+
+@media (min-width: 1024px) {
+  .vjs-control-bar {
+    font-size: 18px; /* Standard size on desktop */
+  }
+}
+
+/* Make control buttons touch-friendly on mobile */
+@media (max-width: 639px) {
+  .vjs-control {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 /* --- GEAR ICON SIZE --- */
 /* Makes the gear icon larger (same size as Fullscreen icon) */
 .vjs-icon-cog:before {

@@ -654,7 +654,7 @@ const handleThumbnailDelete = async (videoId) => {
         <div className="w-full max-w-[90rem] flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 mt-4 sm:mt-6 lg:mt-8 px-4 sm:px-6">
           {/* Video Section */}
           <div className="flex-1 flex flex-col min-w-0">
-            <div className="rounded-lg sm:rounded-xl overflow-hidden bg-black shadow-lg aspect-video">
+            <div className="rounded-lg sm:rounded-xl overflow-hidden bg-black shadow-lg">
               <VideoPlayer
                 options={videoPlayerOptions}
                 onReady={handlePlayerReady}

@@ -18,6 +18,23 @@ export const VideoPlayer = (props) => {
       const player = (playerRef.current = videojs(videoElement, options, () => {
         videojs.log("player is ready");
         onReady && onReady(player);
+        
+        // Add fullscreen event listeners for landscape orientation on mobile
+        player.on('fullscreenchange', () => {
+          if (player.isFullscreen()) {
+            // Lock to landscape when entering fullscreen on mobile/tablet
+            if (screen.orientation && screen.orientation.lock) {
+              screen.orientation.lock('landscape').catch(err => {
+                console.log('Orientation lock failed:', err);
+              });
+            }
+          } else {
+            // Unlock orientation when exiting fullscreen
+            if (screen.orientation && screen.orientation.unlock) {
+              screen.orientation.unlock();
+            }
+          }
+        });
       }));
 
       const MenuButton = videojs.getComponent("MenuButton");
@@ -154,8 +171,8 @@ export const VideoPlayer = (props) => {
     }, [playerRef]);
   
     return (
-      <div data-vjs-player style={{ width: "800px", position: "relative" }}>
-        <div ref={videoRef} />
+      <div data-vjs-player className="w-full aspect-video">
+        <div ref={videoRef} className="w-full h-full" />
       </div>
     );
 };
