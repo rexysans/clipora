@@ -16,6 +16,7 @@ import ConfirmModal from "../../components/UI/ConfirmModal";
 import VideoEditModal from "../../components/UI/VideoEditModal";
 import RecommendedVideos from "../../components/VideoPlayer/RecommendedVideos";
 import CommentSection from "../../components/Comments/CommentSection";
+import FollowButton from "../../components/UI/FollowButton";
 
 const VIEW_THRESHOLD = 20;
 
@@ -89,6 +90,8 @@ function Watch() {
 
         const res = await fetch(url);
         const data = await res.json();
+        console.log('Video data received:', data);
+        console.log('Uploader data:', data.uploader);
         setVideoData({
           title: data.title,
           description: data.description || "",
@@ -754,24 +757,42 @@ const handleThumbnailDelete = async (videoId) => {
 
                   {/* Uploader Info - Clickable */}
                   {videoData.uploader && (
-                    <Link
-                      to={`/channel/${videoData.uploader.id}`}
-                      className="flex items-center gap-3 mb-4 hover:bg-neutral-200 dark:hover:bg-neutral-700 p-3 rounded-lg transition-colors -ml-3"
-                    >
-                      <img
-                        src={videoData.uploader.avatar}
-                        alt={videoData.uploader.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className="font-semibold text-base">
-                          {videoData.uploader.name}
-                        </p>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                          Channel
-                        </p>
-                      </div>
-                    </Link>
+                    <div className="flex items-center justify-between mb-4 p-3 -ml-3">
+                      <Link
+                        to={`/channel/${videoData.uploader.id}`}
+                        className="flex items-center gap-3 hover:bg-neutral-200 dark:hover:bg-neutral-700 p-3 rounded-lg transition-colors -ml-3"
+                      >
+                        <img
+                          src={videoData.uploader.avatar}
+                          alt={videoData.uploader.name}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="font-semibold text-base">
+                            {videoData.uploader.name}
+                          </p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                            {videoData.uploader.followerCount || 0} {videoData.uploader.followerName || 'Subscribers'}
+                          </p>
+                        </div>
+                      </Link>
+                      {!isOwner && (
+                        <FollowButton
+                          userId={videoData.uploader.id}
+                          initialFollowerCount={videoData.uploader.followerCount || 0}
+                          followerName={videoData.uploader.followerName || 'Subscribers'}
+                          onFollowChange={(isFollowing, newCount) => {
+                            setVideoData(prev => ({
+                              ...prev,
+                              uploader: {
+                                ...prev.uploader,
+                                followerCount: newCount
+                              }
+                            }));
+                          }}
+                        />
+                      )}
+                    </div>
                   )}
 
                   <div>

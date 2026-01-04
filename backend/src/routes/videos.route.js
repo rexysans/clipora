@@ -161,7 +161,9 @@ router.get("/:id", async (req, res) => {
         v.thumbnail_path,
         u.id as uploader_id,
         u.name as uploader_name,
-        u.avatar_url as uploader_avatar
+        u.avatar_url as uploader_avatar,
+        u.follower_count as uploader_follower_count,
+        u.follower_name as uploader_follower_name
       FROM videos v
       LEFT JOIN users u ON v.uploader_id = u.id
       WHERE v.id = $1
@@ -209,6 +211,8 @@ router.get("/:id", async (req, res) => {
         id: video.uploader_id,
         name: video.uploader_name,
         avatar: video.uploader_avatar,
+        followerCount: video.uploader_follower_count || 0,
+        followerName: video.uploader_follower_name || 'Subscribers',
       } : null,
     });
   } catch (error) {
