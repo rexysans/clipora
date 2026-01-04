@@ -4,6 +4,7 @@ import { lazy, Suspense } from 'react';
 import Loader from '../components/UI/Loader';
 import ErrorMessage from '../components/UI/ErrorMessage';
 import ProtectedRoute from '../components/ProtectedRoute';
+import Layout from './Layout';
 
 const Home = lazy(() => import('../pages/Home/Home'));
 const Watch = lazy(() => import('../pages/Watch/Watch'));
@@ -27,83 +28,83 @@ const ErrorElement = ({ error }) => (
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <ProtectedRoute>
-          <Home />
-        </ProtectedRoute>
-      </Suspense>
-    ),
-    errorElement: <ErrorElement />
-  },
-  {
-    path: '/watch/:videoId',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <ProtectedRoute>
-          <Watch />
-        </ProtectedRoute>
-      </Suspense>
-    ),
-    errorElement: <ErrorElement />
-  },
-  {
-    path: '/upload',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <ProtectedRoute>
-          <Upload />
-        </ProtectedRoute>
-      </Suspense>
-    ),
-    errorElement: <ErrorElement />
-  },
-  {
-    path: '/channel/:userId',  // NEW
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <ProtectedRoute>
-          <Channel />
-        </ProtectedRoute>
-      </Suspense>
-    ),
-    errorElement: <ErrorElement />
-  },
-  {
-    path: '/search',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <ProtectedRoute>
-          <Search />
-        </ProtectedRoute>
-      </Suspense>
-    ),
-    errorElement: <ErrorElement />
-  },
-  {
-    path: '/login',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <Login />
-      </Suspense>
-    ),
-    errorElement: <ErrorElement />
-  },
-  {
-    path: '/signup',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <Signup />
-      </Suspense>
-    ),
-    errorElement: <ErrorElement />
-  },
-  {
-    path: '*',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <NotFound />
-      </Suspense>
-    )
+    element: <Layout />,
+    errorElement: <ErrorElement />,
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'watch/:videoId',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <Watch />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'upload',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <Upload />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'channel/:userId',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <Channel />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'search',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <Search />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'login',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <Login />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'signup',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <Signup />
+          </Suspense>
+        ),
+      },
+      {
+        path: '*',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <NotFound />
+          </Suspense>
+        )
+      }
+    ]
   }
 ]);

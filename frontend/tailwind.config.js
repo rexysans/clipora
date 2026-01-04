@@ -13,6 +13,17 @@ export default {
       '2xl': '1536px', // large screens
     },
     extend: {
+      fontFamily: {
+        sans: ["Manrope", "ui-sans-serif", "system-ui"],
+      },
+      colors: {
+        bg: "#0B0B0F",
+        surface: "#15151C",
+        accent: "#7C3AED",
+        accentSoft: "#A78BFA",
+        textPrimary: "#FFFFFF",
+        textSecondary: "#9CA3AF",
+      },
       fontSize: {
         // Mobile-first rem units with scaling at ≥1024px
         'xs': ['0.75rem', { lineHeight: '1rem' }],
