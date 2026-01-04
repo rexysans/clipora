@@ -963,25 +963,34 @@ const handleThumbnailDelete = async (videoId) => {
               )}
             </div>
 
+            {/* Recommended videos - Show on mobile before comments */}
+            <div className="w-full max-w-5xl mx-auto block lg:hidden">
+              <RecommendedVideos videos={recommended} currentVideoId={videoId} />
+            </div>
+
             {/* Comments Section */}
-            <CommentSection
-              videoId={videoId}
-              user={user}
-              comments={comments}
-              commentCount={videoData.commentCount}
-              loadingComments={loadingComments}
-              postingComment={postingComment}
-              onPostComment={handlePostComment}
-              onPostReply={handlePostReply}
-              onEditComment={handleEditComment}
-              onDeleteComment={(commentId, isReply, parentId) =>
-                openDeleteModal(commentId, isReply, parentId)
-              }
-            />
+            <div className="w-full max-w-5xl mx-auto">
+              <CommentSection
+                videoId={videoId}
+                user={user}
+                comments={comments}
+                commentCount={videoData.commentCount}
+                loadingComments={loadingComments}
+                postingComment={postingComment}
+                onPostComment={handlePostComment}
+                onPostReply={handlePostReply}
+                onEditComment={handleEditComment}
+                onDeleteComment={(commentId, isReply, parentId) =>
+                  openDeleteModal(commentId, isReply, parentId)
+                }
+              />
+            </div>
           </div>
 
-          {/* Sidebar: Recommended videos */}
-          <RecommendedVideos videos={recommended} currentVideoId={videoId} />
+          {/* Sidebar: Recommended videos - Desktop only */}
+          <div className="hidden lg:block">
+            <RecommendedVideos videos={recommended} currentVideoId={videoId} />
+          </div>
         </div>
       </div>
     </>

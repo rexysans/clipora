@@ -21,16 +21,58 @@
   height: 100% !important;
 }
 
+/* Ensure control bar is always visible and properly sized */
+.video-js .vjs-control-bar {
+  display: flex !important;
+  flex-wrap: nowrap;
+}
+
+/* Make sure controls don't overflow - but allow some to shrink */
+.video-js .vjs-control {
+  flex-shrink: 0;
+}
+
+/* Progress bar should be flexible and can shrink */
+.video-js .vjs-progress-control {
+  flex: 1 1 auto;
+  min-width: 4em;
+}
+
+/* Time controls can shrink slightly if needed */
+.video-js .vjs-time-control {
+  flex-shrink: 1;
+}
+
+/* Ensure gear button (quality selector) is always visible */
+.video-js .vjs-icon-cog,
+.video-js .QualityMenuButton {
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+}
+
 /* Mobile responsiveness - scale down on smaller screens */
 @media (max-width: 600px) {
   .video-js .vjs-control-bar {
     font-size: 90%;
+  }
+  
+  /* Ensure time displays don't take too much space */
+  .video-js .vjs-time-control {
+    font-size: 0.9em;
+    padding-left: 0.4em;
+    padding-right: 0.4em;
   }
 }
 
 @media (max-width: 400px) {
   .video-js .vjs-control-bar {
     font-size: 80%;
+  }
+  
+  .video-js .vjs-time-control {
+    font-size: 0.85em;
+    padding-left: 0.3em;
+    padding-right: 0.3em;
   }
 }
 
