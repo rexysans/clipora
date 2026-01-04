@@ -12,6 +12,7 @@ const Upload = lazy(() => import('../pages/Upload/Upload'));
 const Channel = lazy(() => import('../pages/Channel/Channel'));
 const Search = lazy(() => import('../pages/Search/Search'));
 const Following = lazy(() => import('../pages/Following/Following'));
+const Liked = lazy(() => import('../pages/Liked/Liked'));
 const Login = lazy(() => import('../pages/Login/Login'));
 const Signup = lazy(() => import('../pages/Signup/Signup'));
 const NotFound = lazy(() => import('../pages/NotFound/NotFound'));
@@ -88,6 +89,16 @@ export const router = createBrowserRouter([
           <Suspense fallback={<LoadingFallback />}>
             <ProtectedRoute>
               <Following />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'liked',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <Liked />
             </ProtectedRoute>
           </Suspense>
         ),

@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   VIDEO_DELETE: (id) => `${API_BASE_URL}/videos/${id}`,
   VIDEO_THUMBNAIL: (id) => `${API_BASE_URL}/videos/${id}/thumbnail`, // NEW
   VIDEOS_BY_USER: (userId) => `${API_BASE_URL}/videos/user/${userId}`,
+  VIDEOS_LIKED_BY_USER: (userId) => `${API_BASE_URL}/videos/liked/${userId}`,
   VIDEO_VIEW: (id) => `${API_BASE_URL}/videos/${id}/view`,
   VIDEO_REACTION: (id) => `${API_BASE_URL}/videos/${id}/reaction`,
   VIDEO_COMMENTS: (id) => `${API_BASE_URL}/videos/${id}/comments`,
