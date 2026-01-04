@@ -164,6 +164,106 @@ export const VideoPlayer = (props) => {
 
         if (qualityLevels.length > 0) addGearButton();
         else qualityLevels.one("addqualitylevel", addGearButton);
+
+        // Add keyboard controls
+        const handleKeyPress = (e) => {
+          // Don't trigger if user is typing in an input field
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+          }
+
+          switch(e.key.toLowerCase()) {
+            case ' ':
+            case 'k':
+              e.preventDefault();
+              if (player.paused()) {
+                player.play();
+              } else {
+                player.pause();
+              }
+              break;
+            
+            case 'f':
+              e.preventDefault();
+              if (player.isFullscreen()) {
+                player.exitFullscreen();
+              } else {
+                player.requestFullscreen();
+              }
+              break;
+            
+            case 'm':
+              e.preventDefault();
+              player.muted(!player.muted());
+              break;
+            
+            case 'arrowleft':
+              e.preventDefault();
+              player.currentTime(Math.max(0, player.currentTime() - 5));
+              break;
+            
+            case 'arrowright':
+              e.preventDefault();
+              player.currentTime(Math.min(player.duration(), player.currentTime() + 5));
+              break;
+            
+            case 'arrowup':
+              e.preventDefault();
+              player.volume(Math.min(1, player.volume() + 0.1));
+              break;
+            
+            case 'arrowdown':
+              e.preventDefault();
+              player.volume(Math.max(0, player.volume() - 0.1));
+              break;
+            
+            case 'j':
+              e.preventDefault();
+              player.currentTime(Math.max(0, player.currentTime() - 10));
+              break;
+            
+            case 'l':
+              e.preventDefault();
+              player.currentTime(Math.min(player.duration(), player.currentTime() + 10));
+              break;
+            
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+              e.preventDefault();
+              const percent = parseInt(e.key) / 10;
+              player.currentTime(player.duration() * percent);
+              break;
+            
+            case ',':
+              e.preventDefault();
+              if (player.paused()) {
+                player.currentTime(Math.max(0, player.currentTime() - 1/30)); // Frame backward
+              }
+              break;
+            
+            case '.':
+              e.preventDefault();
+              if (player.paused()) {
+                player.currentTime(Math.min(player.duration(), player.currentTime() + 1/30)); // Frame forward
+              }
+              break;
+          }
+        };
+
+        document.addEventListener('keydown', handleKeyPress);
+
+        // Store cleanup function
+        player.on('dispose', () => {
+          document.removeEventListener('keydown', handleKeyPress);
+        });
       });
 
     } else {
