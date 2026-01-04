@@ -14,6 +14,8 @@ import Loader from "../../components/UI/Loader";
 import ErrorMessage from "../../components/UI/ErrorMessage";
 import ConfirmModal from "../../components/UI/ConfirmModal";
 import VideoEditModal from "../../components/UI/VideoEditModal";
+import FollowButton from "../../components/UI/FollowButton";
+import FollowerSettingsModal from "../../components/UI/FollowerSettingsModal";
 import { API_ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../app/AuthContext";
 import ProcessingVideoCard from "../../components/UI/ProcessingVideoCard";
@@ -32,6 +34,7 @@ export default function Channel() {
     isOpen: false,
     videoId: null,
   });
+  const [followerSettingsOpen, setFollowerSettingsOpen] = useState(false);
 
   const isOwnChannel = user && user.id === userId;
 
@@ -239,26 +242,70 @@ export default function Channel() {
         <div className="max-w-[1600px] mx-auto px-6 py-8">
           {/* Channel Header */}
           <div className="mb-8 pb-6 border-b border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-6">
-              <img
-                src={channelUser.avatar}
-                alt={channelUser.name}
-                className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-800 shadow-lg"
-              />
-              <div>
-                <h1 className="text-3xl font-bold mb-2">{channelUser.name}</h1>
-                <p className="text-neutral-600 dark:text-neutral-400">
-                  {readyVideos.length}{" "}
-                  {readyVideos.length === 1 ? "video" : "videos"}
-                </p>
-                {isOwnChannel && (
-                  <p className="text-sm text-indigo-600 dark:text-indigo-400 mt-1">
-                    Your Channel
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <img
+                  src={channelUser.avatar}
+                  alt={channelUser.name}
+                  className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-800 shadow-lg"
+                />
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">{channelUser.name}</h1>
+                  <p className="text-neutral-600 dark:text-neutral-400 mb-2">
+                    {readyVideos.length}{" "}
+                    {readyVideos.length === 1 ? "video" : "videos"}
                   </p>
+                  {isOwnChannel && (
+                    <p className="text-sm text-indigo-600 dark:text-indigo-400">
+                      Your Channel
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Follow Button and Settings */}
+              <div className="flex items-center gap-3">
+                <FollowButton
+                  userId={userId}
+                  initialFollowerCount={channelUser.followerCount}
+                  followerName={channelUser.followerName}
+                  onFollowChange={(isFollowing, newCount) => {
+                    setChannelData((prev) => ({
+                      ...prev,
+                      user: {
+                        ...prev.user,
+                        followerCount: newCount,
+                      },
+                    }));
+                  }}
+                />
+                {isOwnChannel && (
+                  <button
+                    onClick={() => setFollowerSettingsOpen(true)}
+                    className="px-4 py-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition"
+                  >
+                    Customize
+                  </button>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Follower Settings Modal */}
+          <FollowerSettingsModal
+            isOpen={followerSettingsOpen}
+            onClose={() => setFollowerSettingsOpen(false)}
+            currentFollowerName={channelUser.followerName}
+            onUpdate={(newName) => {
+              setChannelData((prev) => ({
+                ...prev,
+                user: {
+                  ...prev.user,
+                  followerName: newName,
+                },
+              }));
+            }}
+          />
 
           {/* Processing Videos Section */}
           {processingVideos.length > 0 && (

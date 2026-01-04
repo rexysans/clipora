@@ -19,4 +19,10 @@ export const API_ENDPOINTS = {
   PROGRESS_BY_VIDEO_USER: (videoId, userId) => `${API_BASE_URL}/progress/${videoId}/${userId}`,
   VIDEO_STATUS: (id) => `${API_BASE_URL}/videos/${id}/status`,
   PROGRESS: `${API_BASE_URL}/progress`,
+  // Followers
+  USER_FOLLOW: (userId) => `${API_BASE_URL}/users/${userId}/follow`,
+  USER_FOLLOW_STATUS: (userId) => `${API_BASE_URL}/users/${userId}/follow-status`,
+  USER_FOLLOWERS: (userId) => `${API_BASE_URL}/users/${userId}/followers`,
+  USER_FOLLOWING: (userId) => `${API_BASE_URL}/users/${userId}/following`,
+  USER_FOLLOWER_NAME: `${API_BASE_URL}/users/follower-name`,
 };

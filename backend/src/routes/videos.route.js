@@ -81,7 +81,7 @@ router.get("/user/:userId", async (req, res) => {
     
     // First get user info
     const userResult = await pool.query(
-      "SELECT id, name, avatar_url FROM users WHERE id = $1",
+      "SELECT id, name, avatar_url, follower_count, following_count, follower_name FROM users WHERE id = $1",
       [userId]
     );
     
@@ -128,6 +128,9 @@ const videos = videosResult.rows.map((v) => ({
         id: user.id,
         name: user.name,
         avatar: user.avatar_url,
+        followerCount: user.follower_count || 0,
+        followingCount: user.following_count || 0,
+        followerName: user.follower_name || "Followers",
       },
       videos,
     });
