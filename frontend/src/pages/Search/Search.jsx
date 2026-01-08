@@ -134,6 +134,11 @@ export default function Search() {
                         <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 truncate">
                           {channel.name}
                         </h3>
+                        {channel.username && (
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
+                            @{channel.username}
+                          </p>
+                        )}
                         <p className="text-sm text-neutral-600 dark:text-neutral-400">
                           {channel.followerCount.toLocaleString()} {channel.followerName}
                         </p>
@@ -197,6 +202,9 @@ export default function Search() {
                           </div>
                           <span className="text-sm text-neutral-600 dark:text-neutral-400">
                             {video.uploader.name}
+                            {video.uploader.username && (
+                              <span className="text-neutral-500 dark:text-neutral-500"> • @{video.uploader.username}</span>
+                            )}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-neutral-500 dark:text-neutral-500">

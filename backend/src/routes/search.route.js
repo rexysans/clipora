@@ -42,7 +42,8 @@ router.get("/", async (req, res) => {
         v.thumbnail_path,
         u.id as uploader_id,
         u.name as uploader_name,
-        u.avatar_url as uploader_avatar
+        u.avatar_url as uploader_avatar,
+        u.username as uploader_username
       FROM videos v
       LEFT JOIN users u ON v.uploader_id = u.id
       WHERE v.status = 'ready' 
@@ -58,6 +59,7 @@ router.get("/", async (req, res) => {
         u.id,
         u.name,
         u.avatar_url,
+        u.username,
         u.follower_count,
         u.follower_name,
         COUNT(v.id) as video_count
@@ -82,6 +84,7 @@ router.get("/", async (req, res) => {
         id: video.uploader_id,
         name: video.uploader_name,
         avatar: video.uploader_avatar,
+        username: video.uploader_username,
       },
     }));
 
@@ -90,6 +93,7 @@ router.get("/", async (req, res) => {
       id: channel.id,
       name: channel.name,
       avatar: channel.avatar_url,
+      username: channel.username,
       followerCount: channel.follower_count || 0,
       followerName: channel.follower_name || "Subscribers",
       videoCount: parseInt(channel.video_count) || 0,
