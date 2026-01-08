@@ -11,7 +11,7 @@ import { useAuth } from "../../app/AuthContext";
 
 function Sidebar() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user } = useAuth() || {};
 
   const menuItems = [
     {

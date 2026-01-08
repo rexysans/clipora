@@ -43,7 +43,8 @@ const result = await pool.query(`
     v.thumbnail_path,
     u.id as uploader_id,
     u.name as uploader_name,
-    u.avatar_url as uploader_avatar
+    u.avatar_url as uploader_avatar,
+    u.username as uploader_username
   FROM videos v
   LEFT JOIN users u ON v.uploader_id = u.id
   ORDER BY v.created_at DESC
@@ -64,6 +65,7 @@ const videos = result.rows.map((v) => ({
     id: v.uploader_id,
     name: v.uploader_name,
     avatar: v.uploader_avatar,
+    username: v.uploader_username,
   } : null,
 }));
     
@@ -81,7 +83,7 @@ router.get("/user/:userId", async (req, res) => {
     
     // First get user info
     const userResult = await pool.query(
-      "SELECT id, name, avatar_url, follower_count, following_count, follower_name FROM users WHERE id = $1",
+      "SELECT id, name, avatar_url, username, follower_count, following_count, follower_name FROM users WHERE id = $1",
       [userId]
     );
     
@@ -128,6 +130,7 @@ const videos = videosResult.rows.map((v) => ({
         id: user.id,
         name: user.name,
         avatar: user.avatar_url,
+        username: user.username,
         followerCount: user.follower_count || 0,
         followingCount: user.following_count || 0,
         followerName: user.follower_name || "Followers",
@@ -162,6 +165,7 @@ router.get("/:id", async (req, res) => {
         u.id as uploader_id,
         u.name as uploader_name,
         u.avatar_url as uploader_avatar,
+        u.username as uploader_username,
         u.follower_count as uploader_follower_count,
         u.follower_name as uploader_follower_name
       FROM videos v
@@ -211,6 +215,7 @@ router.get("/:id", async (req, res) => {
         id: video.uploader_id,
         name: video.uploader_name,
         avatar: video.uploader_avatar,
+        username: video.uploader_username,
         followerCount: video.uploader_follower_count || 0,
         followerName: video.uploader_follower_name || 'Subscribers',
       } : null,
@@ -941,7 +946,8 @@ router.get("/liked/:userId", requireAuth, async (req, res) => {
         vr.created_at as liked_at,
         u.id as uploader_id,
         u.name as uploader_name,
-        u.avatar_url as uploader_avatar
+        u.avatar_url as uploader_avatar,
+        u.username as uploader_username
       FROM video_reactions vr
       INNER JOIN videos v ON vr.video_id = v.id
       LEFT JOIN users u ON v.uploader_id = u.id
@@ -965,6 +971,7 @@ router.get("/liked/:userId", requireAuth, async (req, res) => {
         id: v.uploader_id,
         name: v.uploader_name,
         avatar: v.uploader_avatar,
+        username: v.uploader_username,
       } : null,
     }));
     
@@ -1000,7 +1007,8 @@ router.get("/history/:userId", requireAuth, async (req, res) => {
         vv.viewed_at,
         u.id as uploader_id,
         u.name as uploader_name,
-        u.avatar_url as uploader_avatar
+        u.avatar_url as uploader_avatar,
+        u.username as uploader_username
       FROM video_views vv
       INNER JOIN videos v ON vv.video_id = v.id
       LEFT JOIN users u ON v.uploader_id = u.id
@@ -1024,6 +1032,7 @@ router.get("/history/:userId", requireAuth, async (req, res) => {
         id: v.uploader_id,
         name: v.uploader_name,
         avatar: v.uploader_avatar,
+        username: v.uploader_username,
       } : null,
     }));
     
@@ -1059,7 +1068,8 @@ router.get("/watch-later/:userId", requireAuth, async (req, res) => {
         wl.added_at,
         u.id as uploader_id,
         u.name as uploader_name,
-        u.avatar_url as uploader_avatar
+        u.avatar_url as uploader_avatar,
+        u.username as uploader_username
       FROM watch_later wl
       INNER JOIN videos v ON wl.video_id = v.id
       LEFT JOIN users u ON v.uploader_id = u.id
@@ -1083,6 +1093,7 @@ router.get("/watch-later/:userId", requireAuth, async (req, res) => {
         id: v.uploader_id,
         name: v.uploader_name,
         avatar: v.uploader_avatar,
+        username: v.uploader_username,
       } : null,
     }));
     

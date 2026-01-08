@@ -251,6 +251,9 @@ function WatchLater() {
                         </div>
                         <span className="text-xs sm:text-sm text-neutral-600 dark:text-textSecondary">
                           {video.uploader.name}
+                          {video.uploader.username && (
+                            <span className="text-neutral-500 dark:text-neutral-500"> • @{video.uploader.username}</span>
+                          )}
                         </span>
                       </Link>
                     )}

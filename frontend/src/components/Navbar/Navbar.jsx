@@ -102,9 +102,16 @@ export default function Navbar() {
                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center border-2 border-white dark:border-neutral-700" style={{ display: (user.avatar_url && user.avatar_url.trim() !== '') ? 'none' : 'flex' }}>
                   <UserIcon className="w-4 h-4 text-white" />
                 </div>
-                <span className="hidden lg:inline text-sm font-medium text-neutral-900 dark:text-neutral-100 max-w-[10rem] truncate">
-                  {user.name}
-                </span>
+                <div className="hidden lg:flex flex-col max-w-[10rem]">
+                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                    {user.name}
+                  </span>
+                  {user.username && (
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                      @{user.username}
+                    </span>
+                  )}
+                </div>
               </Link>
 
               {/* Settings Button */}

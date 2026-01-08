@@ -18,6 +18,7 @@ import RecommendedVideos from "../../components/VideoPlayer/RecommendedVideos";
 import CommentSection from "../../components/Comments/CommentSection";
 import FollowButton from "../../components/UI/FollowButton";
 import WatchLaterButton from "../../components/UI/WatchLaterButton";
+import UserIcon from "../../assets/UserIcon";
 
 const VIEW_THRESHOLD = 5; // 5 seconds - reasonable for both short and long videos
 
@@ -931,6 +932,11 @@ const handleThumbnailDelete = async (videoId) => {
                           <p className="font-semibold text-base truncate">
                             {videoData.uploader.name}
                           </p>
+                          {videoData.uploader.username && (
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                              @{videoData.uploader.username}
+                            </p>
+                          )}
                           <p className="text-xs text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
                             {videoData.uploader.followerCount || 0} {videoData.uploader.followerName || 'Subscribers'}
                           </p>

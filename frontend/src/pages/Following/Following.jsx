@@ -188,9 +188,16 @@ function Following() {
                     </div>
                     
                     {/* Channel Name */}
-                    <h3 className="text-lg sm:text-xl font-semibold mb-2 group-hover:text-accent transition-colors line-clamp-2">
+                    <h3 className="text-lg sm:text-xl font-semibold mb-1 group-hover:text-accent transition-colors line-clamp-2">
                       {channel.name}
                     </h3>
+
+                    {/* Username */}
+                    {channel.username && (
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">
+                        @{channel.username}
+                      </p>
+                    )}
 
                     {/* Follower Count */}
                     <p className="text-sm text-neutral-600 dark:text-textSecondary">

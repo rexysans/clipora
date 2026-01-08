@@ -170,6 +170,9 @@ export default function Home() {
                     className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors inline-block mt-0.5"
                   >
                     {video.uploader?.name || "Unknown Channel"}
+                    {video.uploader?.username && (
+                      <span className="text-neutral-500 dark:text-neutral-500"> • @{video.uploader.username}</span>
+                    )}
                   </Link>
 
                   <p className="text-xs text-neutral-500 mt-0.5">

@@ -250,7 +250,12 @@ export default function Channel() {
                   className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 sm:border-4 border-white dark:border-neutral-800 shadow-lg flex-shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2 truncate">{channelUser.name}</h1>
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 truncate">{channelUser.name}</h1>
+                  {channelUser.username && (
+                    <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 mb-1 sm:mb-2">
+                      @{channelUser.username}
+                    </p>
+                  )}
                   <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 mb-1 sm:mb-2">
                     {readyVideos.length}{" "}
                     {readyVideos.length === 1 ? "video" : "videos"}

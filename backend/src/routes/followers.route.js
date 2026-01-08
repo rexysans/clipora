@@ -159,6 +159,7 @@ router.get("/:userId/followers", async (req, res) => {
         u.name, 
          u.follower_name,
         u.avatar_url,
+        u.username,
         f.created_at as followed_at
       FROM followers f
       JOIN users u ON f.follower_id = u.id
@@ -184,6 +185,7 @@ router.get("/:userId/following", async (req, res) => {
         u.id, 
         u.name, 
         u.avatar_url,
+        u.username,
         u.follower_name,
         f.created_at as followed_at
       FROM followers f
