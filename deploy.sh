@@ -79,9 +79,28 @@ echo -e "${YELLOW}⚠️  Save this password! Update it in $APP_DIR/.env${NC}"
 
 echo -e "${GREEN}Step 9: Running database migrations...${NC}"
 cd $APP_DIR/docs
-for file in *.sql; do
-    echo "Running $file..."
-    sudo -u postgres psql -d stream_platform -f "$file" 2>/dev/null || echo "Skipping $file"
+
+# Run migrations in correct order (dependencies matter!)
+MIGRATIONS=(
+    "users_table.sql"
+    "videos_table.sql"
+    "followers_table.sql"
+    "video_reactions_table.sql"
+    "video_views_table.sql"
+    "commments_table.sql"
+    "watch_later_table.sql"
+    "video_processing_progress.sql"
+    "add_username.sql"
+    "performance_indexes.sql"
+)
+
+for file in "${MIGRATIONS[@]}"; do
+    if [ -f "$file" ]; then
+        echo "Running $file..."
+        sudo -u postgres psql -d stream_platform -f "$file" 2>/dev/null || echo "⚠️  Error in $file (may be already applied)"
+    else
+        echo "⚠️  $file not found, skipping..."
+    fi
 done
 
 echo -e "${GREEN}Step 10: Installing worker dependencies...${NC}"
