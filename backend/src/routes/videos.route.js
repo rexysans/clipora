@@ -26,9 +26,13 @@ function getThumbnailUrl(videoId, thumbnailPath) {
   return null;
 }
 
-// Get all videos with uploader info
+// Get all videos with uploader info (with pagination)
 router.get("/", async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
 const result = await pool.query(`
   SELECT 
     v.id, 
@@ -47,8 +51,10 @@ const result = await pool.query(`
     u.username as uploader_username
   FROM videos v
   LEFT JOIN users u ON v.uploader_id = u.id
+  WHERE v.status = 'ready'
   ORDER BY v.created_at DESC
-`);
+  LIMIT $1 OFFSET $2
+`, [limit, offset]);
 
 const videos = result.rows.map((v) => ({
   id: v.id,
@@ -68,8 +74,23 @@ const videos = result.rows.map((v) => ({
     username: v.uploader_username,
   } : null,
 }));
+
+    // Get total count for pagination
+    const countResult = await pool.query(`
+      SELECT COUNT(*) FROM videos WHERE status = 'ready'
+    `);
+    const total = parseInt(countResult.rows[0].count);
     
-    res.json(videos);
+    res.json({
+      videos,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: offset + limit < total
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch videos" });

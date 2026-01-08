@@ -1,23 +1,55 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import Navbar from "../../components/Navbar/Navbar";
 import { API_ENDPOINTS } from "../../config/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import WatchLaterButton from "../../components/UI/WatchLaterButton";
 import UserIcon from "../../assets/UserIcon";
+import VideoCardSkeleton from "../../components/UI/VideoCardSkeleton";
 
 export default function Home() {
-  const [videos, setVideos] = useState([]);
-  const [error, setError] = useState(null);
+  const observerTarget = useRef(null);
 
-  // Fetch videos
+  // Fetch videos with pagination using React Query
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+  } = useInfiniteQuery({
+    queryKey: ["videos"],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await fetch(`${API_ENDPOINTS.VIDEOS}?page=${pageParam}&limit=20`);
+      if (!res.ok) throw new Error("Failed to load videos");
+      return res.json();
+    },
+    getNextPageParam: (lastPage) => {
+      return lastPage.pagination.hasMore ? lastPage.pagination.page + 1 : undefined;
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+
+  // Intersection Observer for infinite scroll
   useEffect(() => {
-    fetch(API_ENDPOINTS.VIDEOS)
-      .then((res) => res.json())
-      .then(setVideos)
-      .catch(() => setError("Failed to load videos"));
-  }, []);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -48,12 +80,13 @@ export default function Home() {
     return Math.round((likes / total) * 100);
   };
 
-  const readyVideos = videos.filter((v) => v.status === "ready");
+  // Flatten all pages of videos
+  const allVideos = data?.pages.flatMap((page) => page.videos) || [];
 
-  if (error) {
+  if (isError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
-        {error}
+        Failed to load videos
       </div>
     );
   }
@@ -82,7 +115,13 @@ export default function Home() {
             lg:gap-x-8 lg:gap-y-12
           "
         >
-          {readyVideos.map((video) => (
+          {isLoading ? (
+            // Show skeleton loaders on initial load
+            Array.from({ length: 12 }).map((_, i) => (
+              <VideoCardSkeleton key={i} />
+            ))
+          ) : (
+            allVideos.map((video) => (
             <article key={video.id}>
               {/* Thumbnail - Link to video */}
               <Link to={`/watch/${video.id}`} className="group block relative">
@@ -206,10 +245,23 @@ export default function Home() {
                 </div>
               </div>
             </article>
-          ))}
+          ))
+          )}
         </div>
 
-        {readyVideos.length === 0 && (
+        {/* Loading more indicator */}
+        {isFetchingNextPage && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10 lg:gap-x-8 lg:gap-y-12 mt-8">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <VideoCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Intersection observer target for infinite scroll */}
+        <div ref={observerTarget} className="h-10" />
+
+        {allVideos.length === 0 && !isLoading && (
           <div className="text-center py-32 text-neutral-500 dark:text-neutral-400">
             No videos available
           </div>
