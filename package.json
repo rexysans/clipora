@@ -5,6 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev": "NODE_ENV=development node backend/src/server.js",
+    "start": "NODE_ENV=production node backend/src/server.js",
+    "worker": "NODE_ENV=production node worker/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

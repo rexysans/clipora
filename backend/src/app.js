@@ -14,9 +14,14 @@ import searchRoute from "./routes/search.route.js";
 
 const app = express();
 
+// CORS configuration for production and development
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [process.env.FRONTEND_URL || "https://clipora.in"]
+  : ["http://localhost:5173", "http://localhost:3000"];
+
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: allowedOrigins,
     credentials: true,
   })
 );
