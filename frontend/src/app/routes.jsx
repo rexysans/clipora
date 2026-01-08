@@ -15,6 +15,7 @@ const Following = lazy(() => import('../pages/Following/Following'));
 const Liked = lazy(() => import('../pages/Liked/Liked'));
 const History = lazy(() => import('../pages/History/History'));
 const WatchLater = lazy(() => import('../pages/WatchLater/WatchLater'));
+const Settings = lazy(() => import('../pages/Settings/Settings'));
 const Login = lazy(() => import('../pages/Login/Login'));
 const Signup = lazy(() => import('../pages/Signup/Signup'));
 const NotFound = lazy(() => import('../pages/NotFound/NotFound'));
@@ -121,6 +122,16 @@ export const router = createBrowserRouter([
           <Suspense fallback={<LoadingFallback />}>
             <ProtectedRoute>
               <WatchLater />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'settings',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           </Suspense>
         ),

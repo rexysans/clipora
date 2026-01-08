@@ -913,11 +913,20 @@ const handleThumbnailDelete = async (videoId) => {
                         to={`/channel/${videoData.uploader.id}`}
                         className="flex items-center gap-3 hover:bg-neutral-200 dark:hover:bg-neutral-700 p-3 rounded-lg transition-colors -ml-3 w-full sm:w-auto"
                       >
-                        <img
-                          src={videoData.uploader.avatar}
-                          alt={videoData.uploader.name}
-                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                        />
+                        {videoData.uploader.avatar && videoData.uploader.avatar.trim() !== '' ? (
+                          <img
+                            src={videoData.uploader.avatar}
+                            alt=""
+                            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0" style={{ display: (videoData.uploader.avatar && videoData.uploader.avatar.trim() !== '') ? 'none' : 'flex' }}>
+                          <UserIcon className="w-6 h-6 text-white" />
+                        </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-base truncate">
                             {videoData.uploader.name}

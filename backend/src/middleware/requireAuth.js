@@ -8,7 +8,7 @@ export default async function requireAuth(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await pool.query(
-      "SELECT id, email, name, avatar_url FROM users WHERE id = $1",
+      "SELECT id, email, name, avatar_url, username FROM users WHERE id = $1",
       [payload.sub]
     );
 

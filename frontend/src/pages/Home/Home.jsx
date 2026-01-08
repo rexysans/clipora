@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from "../../config/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import WatchLaterButton from "../../components/UI/WatchLaterButton";
+import UserIcon from "../../assets/UserIcon";
 
 export default function Home() {
   const [videos, setVideos] = useState([]);
@@ -127,20 +128,25 @@ export default function Home() {
               {/* Info */}
               <div className="flex gap-3 mt-3">
                 {/* Uploader Avatar - Link to channel */}
-                {video.uploader?.avatar ? (
-                  <Link
-                    to={`/channel/${video.uploader.id}`}
-                    className="flex-shrink-0"
-                  >
+                <Link
+                  to={`/channel/${video.uploader.id}`}
+                  className="flex-shrink-0"
+                >
+                  {video.uploader?.avatar && video.uploader.avatar.trim() !== '' ? (
                     <img
                       src={video.uploader.avatar}
-                      alt={video.uploader.name}
+                      alt=""
                       className="w-9 h-9 rounded-full object-cover hover:ring-2 hover:ring-indigo-500 transition"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
                     />
-                  </Link>
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
-                )}
+                  ) : null}
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center" style={{ display: (video.uploader?.avatar && video.uploader.avatar.trim() !== '') ? 'none' : 'flex' }}>
+                    <UserIcon className="w-5 h-5 text-white" />
+                  </div>
+                </Link>
 
                 <div className="min-w-0 flex-1">
                   {/* Video Title - Link to video */}

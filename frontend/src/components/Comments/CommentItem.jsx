@@ -5,8 +5,9 @@ import {
   faEdit, 
   faTrash, 
   faChevronDown, 
-  faChevronUp 
+  faChevronUp
 } from "@fortawesome/free-solid-svg-icons";
+import UserIcon from "../../assets/UserIcon";
 
 export default function CommentItem({ 
   comment, 
@@ -64,11 +65,20 @@ export default function CommentItem({
     <div className="space-y-4">
       {/* Main Comment */}
       <div className="flex gap-3">
-        <img
-          src={comment.user.avatar}
-          alt={comment.user.name}
-          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-        />
+        {comment.user.avatar && comment.user.avatar.trim() !== '' ? (
+          <img
+            src={comment.user.avatar}
+            alt=""
+            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0" style={{ display: (comment.user.avatar && comment.user.avatar.trim() !== '') ? 'none' : 'flex' }}>
+          <UserIcon className="w-5 h-5 text-white" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-semibold text-sm">

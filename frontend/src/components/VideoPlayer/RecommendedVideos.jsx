@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import WatchLaterButton from "../UI/WatchLaterButton";
+import UserIcon from "../../assets/UserIcon";
 
 export default function RecommendedVideos({ videos, currentVideoId }) {
   const navigate = useNavigate();
@@ -105,20 +106,25 @@ export default function RecommendedVideos({ videos, currentVideoId }) {
                     {/* Channel Info - Clickable */}
                     <div className="flex items-center gap-2 mt-2">
                       {/* Channel Avatar - Link to channel */}
-                      {video.uploader?.avatar ? (
-                        <div
-                          onClick={(e) => handleChannelClick(e, video.uploader.id)}
-                          className="flex-shrink-0 cursor-pointer"
-                        >
+                      <div
+                        onClick={(e) => handleChannelClick(e, video.uploader.id)}
+                        className="flex-shrink-0 cursor-pointer relative"
+                      >
+                        {video.uploader?.avatar && video.uploader.avatar.trim() !== '' ? (
                           <img
                             src={video.uploader.avatar}
-                            alt={video.uploader.name}
+                            alt=""
                             className="w-6 h-6 rounded-full object-cover hover:ring-2 hover:ring-indigo-500 transition"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
                           />
+                        ) : null}
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center" style={{ display: (video.uploader?.avatar && video.uploader.avatar.trim() !== '') ? 'none' : 'flex' }}>
+                          <UserIcon className="w-3 h-3 text-white" />
                         </div>
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
-                      )}
+                      </div>
                       
                       {/* Channel Name - Link to channel */}
                       <div className="flex-1 min-w-0">

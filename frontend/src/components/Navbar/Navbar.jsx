@@ -1,7 +1,8 @@
 // frontend/src/components/Navbar/Navbar.jsx
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSun, faMoon, faRightFromBracket, faCloudArrowUp, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faSun, faMoon, faRightFromBracket, faCloudArrowUp, faSearch, faCog } from "@fortawesome/free-solid-svg-icons";
+import UserIcon from "../../assets/UserIcon";
 import { useTheme } from "../../app/ThemeContext";
 import { useAuth } from "../../app/AuthContext";
 import { useState } from "react";
@@ -87,14 +88,36 @@ export default function Navbar() {
                 to={`/channel/${user.id}`}
                 className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
               >
-                <img
-                  src={user.avatar_url}
-                  alt={user.name}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white dark:border-neutral-700"
-                />
+                {user.avatar_url && user.avatar_url.trim() !== '' ? (
+                  <img
+                    src={user.avatar_url}
+                    alt=""
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white dark:border-neutral-700"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center border-2 border-white dark:border-neutral-700" style={{ display: (user.avatar_url && user.avatar_url.trim() !== '') ? 'none' : 'flex' }}>
+                  <UserIcon className="w-4 h-4 text-white" />
+                </div>
                 <span className="hidden lg:inline text-sm font-medium text-neutral-900 dark:text-neutral-100 max-w-[10rem] truncate">
                   {user.name}
                 </span>
+              </Link>
+
+              {/* Settings Button */}
+              <Link
+                to="/settings"
+                aria-label="Settings"
+                title="Settings"
+                className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full
+                  border border-neutral-300 dark:border-neutral-700
+                  text-neutral-700 dark:text-neutral-300
+                  hover:bg-neutral-200 dark:hover:bg-neutral-800 transition"
+              >
+                <FontAwesomeIcon icon={faCog} className="text-sm" />
               </Link>
 
               {/* Logout Button */}

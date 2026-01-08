@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faComment, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import CommentItem from "./CommentItem";
+import UserIcon from "../../assets/UserIcon";
 
 export default function CommentSection({ 
   videoId, 
@@ -36,11 +37,20 @@ export default function CommentSection({
       {user ? (
         <div className="mb-6">
           <div className="flex gap-3">
-            <img
-              src={user.avatar_url}
-              alt={user.name}
-              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-            />
+            {user.avatar_url && user.avatar_url.trim() !== '' ? (
+              <img
+                src={user.avatar_url}
+                alt=""
+                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0" style={{ display: (user.avatar_url && user.avatar_url.trim() !== '') ? 'none' : 'flex' }}>
+              <UserIcon className="w-5 h-5 text-white" />
+            </div>
             <div className="flex-1">
               <textarea
                 value={commentText}

@@ -3,7 +3,9 @@ import passport from "passport";
 import {
   googleCallback,
   logout,
-  me
+  me,
+  checkUsername,
+  updateUsername
 } from "../controllers/auth.controller.js";
 import requireAuth from "../middleware/requireAuth.js";
 
@@ -26,5 +28,7 @@ router.get(
 
 router.get("/me", requireAuth, me);
 router.post("/logout", logout);
+router.get("/check-username", checkUsername);
+router.put("/update-username", requireAuth, updateUsername);
 
 export default router;

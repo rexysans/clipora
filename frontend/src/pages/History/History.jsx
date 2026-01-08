@@ -6,6 +6,7 @@ import { useAuth } from "../../app/AuthContext";
 import Loader from "../../components/UI/Loader";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import UserIcon from "../../assets/UserIcon";
 
 function History() {
   const { user } = useAuth();
@@ -201,18 +202,21 @@ function History() {
                         to={`/channel/${video.uploader.id}`}
                         className="flex items-center gap-2 hover:text-accent transition-colors"
                       >
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-300 dark:bg-neutral-700 flex-shrink-0">
-                          {video.uploader.avatar ? (
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-300 dark:bg-neutral-700 flex-shrink-0 relative">
+                          {video.uploader.avatar && video.uploader.avatar.trim() !== '' ? (
                             <img
                               src={video.uploader.avatar}
-                              alt={video.uploader.name}
+                              alt=""
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
                             />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-neutral-600 dark:text-neutral-400">
-                              {video.uploader.name?.charAt(0)?.toUpperCase()}
-                            </div>
-                          )}
+                          ) : null}
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-500 absolute inset-0" style={{ display: (video.uploader.avatar && video.uploader.avatar.trim() !== '') ? 'none' : 'flex' }}>
+                            <UserIcon className="w-4 h-4 text-white" />
+                          </div>
                         </div>
                         <span className="text-xs sm:text-sm text-neutral-600 dark:text-textSecondary">
                           {video.uploader.name}

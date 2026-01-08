@@ -3,6 +3,13 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
 export const HLS_BASE_URL = import.meta.env.VITE_HLS_BASE_URL || 'http://localhost:8080';
 
 export const API_ENDPOINTS = {
+  AUTH: {
+    ME: `${API_BASE_URL}/auth/me`,
+    LOGOUT: `${API_BASE_URL}/auth/logout`,
+    GOOGLE: `${API_BASE_URL}/auth/google`,
+    CHECK_USERNAME: `${API_BASE_URL}/auth/check-username`,
+    UPDATE_USERNAME: `${API_BASE_URL}/auth/update-username`,
+  },
   AUTH_ME: `${API_BASE_URL}/auth/me`,
   AUTH_LOGOUT: `${API_BASE_URL}/auth/logout`,
   AUTH_GOOGLE: `${API_BASE_URL}/auth/google`,

@@ -4,6 +4,7 @@ import Navbar from "../../components/Navbar/Navbar";
 import { API_ENDPOINTS } from "../../config/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faVideo } from "@fortawesome/free-solid-svg-icons";
+import UserIcon from "../../assets/UserIcon";
 
 export default function Search() {
   const [searchParams] = useSearchParams();
@@ -180,11 +181,20 @@ export default function Search() {
                           {video.title}
                         </h3>
                         <div className="flex items-center gap-2 mb-2">
-                          <img
-                            src={video.uploader.avatar}
-                            alt={video.uploader.name}
-                            className="w-6 h-6 rounded-full object-cover"
-                          />
+                          {video.uploader.avatar && video.uploader.avatar.trim() !== '' ? (
+                            <img
+                              src={video.uploader.avatar}
+                              alt=""
+                              className="w-6 h-6 rounded-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center" style={{ display: (video.uploader.avatar && video.uploader.avatar.trim() !== '') ? 'none' : 'flex' }}>
+                            <UserIcon className="w-3 h-3 text-white" />
+                          </div>
                           <span className="text-sm text-neutral-600 dark:text-neutral-400">
                             {video.uploader.name}
                           </span>
