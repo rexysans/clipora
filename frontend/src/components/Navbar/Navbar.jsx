@@ -42,7 +42,7 @@ export default function Navbar() {
           </svg>
           
           <span className="text-base sm:text-lg lg:text-xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-            StreamFlix
+            Clipora
           </span>
         </Link>
 
