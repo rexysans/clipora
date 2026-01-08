@@ -44,8 +44,10 @@ fi
 echo -e "${GREEN}Step 4: Creating directory structure...${NC}"
 mkdir -p $APP_DIR
 mkdir -p $MEDIA_DIR/{hls,thumbs,avatars,uploads}
+mkdir -p /var/log/clipora
 chown -R $USER:$USER $APP_DIR
 chown -R $USER:$USER $MEDIA_DIR
+chown -R $USER:$USER /var/log/clipora
 
 echo -e "${GREEN}Step 5: Cloning/updating repository...${NC}"
 if [ -d "$APP_DIR/.git" ]; then
@@ -53,7 +55,7 @@ if [ -d "$APP_DIR/.git" ]; then
     sudo -u $USER git pull
 else
     cd /var/www
-    sudo -u $USER git clone https://github.com/yourusername/clipora.git clipora
+    sudo -u $USER git clone https://github.com/rexysans/clipora.git clipora
     cd $APP_DIR
 fi
 
@@ -67,9 +69,13 @@ sudo -u $USER npm install
 sudo -u $USER npm run build
 
 echo -e "${GREEN}Step 8: Setting up PostgreSQL database...${NC}"
+# Generate a random password or use a secure one
+DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
 sudo -u postgres psql -c "CREATE DATABASE stream_platform;" 2>/dev/null || echo "Database already exists"
-sudo -u postgres psql -c "CREATE USER stream_app WITH PASSWORD 'your_secure_password';" 2>/dev/null || echo "User already exists"
+sudo -u postgres psql -c "CREATE USER stream_app WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null || echo "User already exists"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE stream_platform TO stream_app;"
+echo -e "${YELLOW}Database password: $DB_PASSWORD${NC}"
+echo -e "${YELLOW}⚠️  Save this password! Update it in $APP_DIR/.env${NC}"
 
 echo -e "${GREEN}Step 9: Running database migrations...${NC}"
 cd $APP_DIR/docs
@@ -78,34 +84,53 @@ for file in *.sql; do
     sudo -u postgres psql -d stream_platform -f "$file" 2>/dev/null || echo "Skipping $file"
 done
 
-echo -e "${GREEN}Step 10: Configuring Nginx...${NC}"
+echo -e "${GREEN}Step 10: Installing worker dependencies...${NC}"
+cd $APP_DIR
+sudo -u $USER npm install --production
+
+echo -e "${GREEN}Step 11: Configuring environment files...${NC}"
+if [ ! -f "$APP_DIR/.env" ]; then
+    cp $APP_DIR/.env.production $APP_DIR/.env
+    echo -e "${YELLOW}⚠️  Update database credentials in $APP_DIR/.env${NC}"
+fi
+
+if [ ! -f "$APP_DIR/worker/.env" ]; then
+    cp $APP_DIR/worker/.env.production $APP_DIR/worker/.env
+    echo -e "${YELLOW}⚠️  Update worker environment in $APP_DIR/worker/.env${NC}"
+fi
+
+if [ ! -f "$APP_DIR/frontend/.env" ]; then
+    cp $APP_DIR/frontend/.env.production $APP_DIR/frontend/.env
+fi
+
+chown $USER:$USER $APP_DIR/.env
+chown $USER:$USER $APP_DIR/worker/.env
+chown $USER:$USER $APP_DIR/frontend/.env
+
+echo -e "${GREEN}Step 12: Configuring Nginx...${NC}"
 cp $APP_DIR/nginx.conf /etc/nginx/sites-available/clipora.conf
 ln -sf /etc/nginx/sites-available/clipora.conf /etc/nginx/sites-enabled/clipora.conf
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
 
-echo -e "${GREEN}Step 11: Installing PM2 for process management...${NC}"
+echo -e "${GREEN}Step 13: Installing PM2 for process management...${NC}"
 npm install -g pm2
 
-echo -e "${GREEN}Step 12: Setting up backend service...${NC}"
-cd $APP_DIR/backend
-sudo -u $USER NODE_ENV=production pm2 start src/server.js --name clipora-api
+echo -e "${GREEN}Step 14: Starting services with PM2...${NC}"
+cd $APP_DIR
+sudo -u $USER pm2 delete all 2>/dev/null || true
+sudo -u $USER pm2 start ecosystem.config.js --env production
 sudo -u $USER pm2 save
 pm2 startup systemd -u $USER --hp /home/$USER
 
-echo -e "${GREEN}Step 13: Setting up worker service...${NC}"
-cd $APP_DIR/worker
-sudo -u $USER NODE_ENV=production pm2 start index.js --name clipora-worker
-sudo -u $USER pm2 save
-
-echo -e "${GREEN}Step 14: Setting up SSL with Certbot...${NC}"
+echo -e "${GREEN}Step 15: Setting up SSL with Certbot...${NC}"
 apt-get install -y certbot python3-certbot-nginx
 echo -e "${YELLOW}Run these commands manually after DNS is configured:${NC}"
 echo "certbot --nginx -d clipora.in -d www.clipora.in"
 echo "certbot --nginx -d api.clipora.in"
 echo "certbot --nginx -d media.clipora.in"
 
-echo -e "${GREEN}Step 15: Setting up firewall...${NC}"
+echo -e "${GREEN}Step 16: Setting up firewall...${NC}"
 ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
@@ -114,10 +139,13 @@ ufw --force enable
 echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo ""
 echo -e "${YELLOW}📝 Post-deployment steps:${NC}"
-echo "1. Update environment variables in $APP_DIR/backend/.env.production"
-echo "2. Configure DNS records to point to this server"
-echo "3. Run SSL certificate commands above"
-echo "4. Update GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET"
+echo "1. Update database credentials in $APP_DIR/.env"
+echo "2. Update worker environment in $APP_DIR/worker/.env"
+echo "3. Generate JWT_SECRET: openssl rand -base64 64"
+echo "4. Update GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in $APP_DIR/.env"
+echo "5. Configure DNS records to point to this server"
+echo "6. Run SSL certificate commands above"
+echo "7. Restart services: pm2 restart all"
 echo ""
 echo -e "${YELLOW}🔍 Useful commands:${NC}"
 echo "pm2 status              - Check services status"

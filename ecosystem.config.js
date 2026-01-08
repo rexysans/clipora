@@ -23,7 +23,6 @@ module.exports = {
       script: './worker/index.js',
       instances: 1, // Single instance for video processing
       exec_mode: 'fork',
-      cwd: '/var/www/clipora',
       env: {
         NODE_ENV: 'production',
         LOG_LEVEL: 'INFO',
