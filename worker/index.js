@@ -1,3 +1,4 @@
+import "dotenv/config";
 import pkg from "pg";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -6,15 +7,46 @@ import path from "path";
 const { Pool } = pkg;
 
 /* ===============================
-   DATABASE
+   CONFIGURATION
 ================================ */
-const pool = new Pool({
-  user: "stream_app",
-  host: "127.0.0.1",
-  database: "stream_platform",
-  password: "streampass",
-  port: 5432,
-});
+
+// Database Configuration (same as backend)
+let poolConfig;
+if (process.env.DATABASE_URL) {
+  // Production: Use DATABASE_URL
+  poolConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  };
+} else {
+  // Development: Use individual variables
+  poolConfig = {
+    user: process.env.DB_USER || "stream_app",
+    host: process.env.DB_HOST || "127.0.0.1",
+    database: process.env.DB_NAME || "stream_platform",
+    password: process.env.DB_PASSWORD || "streampass",
+    port: parseInt(process.env.DB_PORT || "5432"),
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  };
+}
+
+const pool = new Pool(poolConfig);
+
+// Storage Configuration (consistent with backend)
+const STORAGE = {
+  UPLOAD_DIR: process.env.UPLOAD_DIR || path.join(process.cwd(), "backend", "uploads"),
+  HLS_DIR: process.env.HLS_DIR || path.join(process.cwd(), "videos", "hls"),
+  THUMB_DIR: process.env.THUMB_DIR || path.join(process.cwd(), "videos", "thumbs"),
+};
+
+// Environment
+const NODE_ENV = process.env.NODE_ENV || "development";
+const LOG_LEVEL = process.env.LOG_LEVEL || "INFO";
 
 /* ===============================
    UTILS
@@ -23,9 +55,22 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Logging with configurable levels
+const LOG_LEVELS = { 
+  ERROR: 0, CRASH: 0, FATAL: 0, 
+  RETRY: 1, READY: 1, 
+  JOB: 2, BOOT: 2, 
+  INFO: 3, RENDITION: 3, 
+  PROGRESS: 4 
+};
+const CURRENT_LOG_LEVEL = LOG_LEVELS[LOG_LEVEL] ?? 3;
+
 function log(level, msg) {
-  const ts = new Date().toISOString();
-  console.log(`[${ts}] [${level}] ${msg}`);
+  const levelPriority = LOG_LEVELS[level] ?? 3;
+  if (levelPriority <= CURRENT_LOG_LEVEL) {
+    const ts = new Date().toISOString();
+    console.log(`[${ts}] [${level}] ${msg}`);
+  }
 }
 
 /* ===============================
@@ -46,10 +91,9 @@ async function updateProgress(videoId, progress) {
    THUMBNAIL
 ================================ */
 async function generateThumbnail(inputPath, id) {
-  const dir = path.join(process.cwd(), "videos", "thumbs");
-  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(STORAGE.THUMB_DIR, { recursive: true });
 
-  const out = path.join(dir, `${id}.jpg`);
+  const out = path.join(STORAGE.THUMB_DIR, `${id}.jpg`);
 
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", [
@@ -94,7 +138,7 @@ async function createMasterPlaylist(id) {
 720/index.m3u8
 `;
 
-  const out = path.join(process.cwd(), "videos", "hls", id, "master.m3u8");
+  const out = path.join(STORAGE.HLS_DIR, id, "master.m3u8");
 
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, content);
@@ -139,7 +183,7 @@ function getVideoDuration(inputPath) {
    HLS TRANSCODING WITH PROGRESS
 ================================ */
 async function runFFMPEG(inputPath, id) {
-  const base = path.join(process.cwd(), "videos", "hls", id);
+  const base = path.join(STORAGE.HLS_DIR, id);
   fs.mkdirSync(base, { recursive: true });
 
   const renditions = [
@@ -340,7 +384,22 @@ async function finalizeJob(id, exitCode, thumbnailPath) {
    MAIN DAEMON LOOP
 ================================ */
 async function main() {
-  log("BOOT", "Worker daemon started");
+  log("BOOT", `Worker daemon started [${NODE_ENV}]`);
+  log("BOOT", `Upload Dir: ${STORAGE.UPLOAD_DIR}`);
+  log("BOOT", `HLS Dir: ${STORAGE.HLS_DIR}`);
+  log("BOOT", `Thumb Dir: ${STORAGE.THUMB_DIR}`);
+  log("BOOT", `Database: ${poolConfig.connectionString ? 'Using DATABASE_URL' : poolConfig.host}`);
+
+  // Verify database connection
+  try {
+    const client = await pool.connect();
+    await client.query('SELECT NOW()');
+    client.release();
+    log("BOOT", "Database connection verified");
+  } catch (err) {
+    log("FATAL", `Database connection failed: ${err.message}`);
+    process.exit(1);
+  }
 
   while (true) {
     try {

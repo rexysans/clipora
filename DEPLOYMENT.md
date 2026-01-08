@@ -14,7 +14,7 @@
 
 ```bash
 # On your production server
-curl -o deploy.sh https://raw.githubusercontent.com/yourusername/clipora/main/deploy.sh
+curl -O https://raw.githubusercontent.com/rexysans/clipora/main/deploy.sh
 chmod +x deploy.sh
 sudo ./deploy.sh
 ```
@@ -77,6 +77,21 @@ Update these critical values:
 # Frontend
 cd /var/www/clipora/frontend
 sudo -u clipora cp .env.production .env
+
+# Worker
+cd /var/www/clipora/worker
+sudo -u clipora cp .env.production .env
+
+# Edit worker environment (should match backend database config)
+sudo -u clipora nano .env
+```
+
+Worker environment variables:
+- `DATABASE_URL` - Same as backend
+- `UPLOAD_DIR` - Absolute path to uploads (e.g., `/var/www/clipora/backend/uploads`)
+- `HLS_DIR` - Absolute path to HLS videos (e.g., `/var/www/clipora/videos/hls`)
+- `THUMB_DIR` - Absolute path to thumbnails (e.g., `/var/www/clipora/videos/thumbs`)
+- `LOG_LEVEL` - Set to `INFO` for production
 ```
 
 ### 5. Setup Database
