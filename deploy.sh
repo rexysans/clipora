@@ -108,16 +108,13 @@ cd $APP_DIR
 sudo -u $USER npm install --production
 
 echo -e "${GREEN}Step 11: Configuring environment files...${NC}"
-if [ ! -f "$APP_DIR/backend/.env" ]; then
-    cp $APP_DIR/backend/.env.production $APP_DIR/backend/.env
-    echo -e "${YELLOW}⚠️  Update database credentials in $APP_DIR/backend/.env${NC}"
+# Backend and Worker share the same root .env file
+if [ ! -f "$APP_DIR/.env" ]; then
+    cp $APP_DIR/.env.production $APP_DIR/.env
+    echo -e "${YELLOW}⚠️  Update database credentials and secrets in $APP_DIR/.env${NC}"
 fi
 
-if [ ! -f "$APP_DIR/worker/.env" ]; then
-    cp $APP_DIR/worker/.env.production $APP_DIR/worker/.env
-    echo -e "${YELLOW}⚠️  Update worker environment in $APP_DIR/worker/.env${NC}"
-fi
-
+# Frontend has its own .env file
 if [ ! -f "$APP_DIR/frontend/.env" ]; then
     cp $APP_DIR/frontend/.env.production $APP_DIR/frontend/.env
     echo -e "${YELLOW}⚠️  Frontend environment configured${NC}"
@@ -128,7 +125,6 @@ if [ ! -f "$APP_DIR/frontend/.env" ]; then
 fi
 
 chown $USER:$USER $APP_DIR/.env
-chown $USER:$USER $APP_DIR/worker/.env
 chown $USER:$USER $APP_DIR/frontend/.env
 
 echo -e "${GREEN}Step 12: Configuring Nginx...${NC}"
@@ -182,13 +178,17 @@ ufw --force enable
 echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo ""
 echo -e "${YELLOW}📝 Post-deployment steps:${NC}"
-echo "1. Update database credentials in $APP_DIR/.env"
-echo "2. Update worker environment in $APP_DIR/worker/.env"
-echo "3. Generate JWT_SECRET: openssl rand -base64 64"
-echo "4. Update GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in $APP_DIR/.env"
-echo "5. Configure DNS records to point to this server"
-echo "6. Run SSL certificate commands above"
-echo "7. Restart services: pm2 restart all"
+echo "1. Update $APP_DIR/.env with:"
+echo "   - Database password from Step 8 above"
+echo "   - JWT_SECRET (generate: openssl rand -base64 64)"
+echo "   - GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET"
+echo "2. Configure DNS records to point to this server:"
+echo "   - clipora.in -> server IP"
+echo "   - www.clipora.in -> server IP"
+echo "   - api.clipora.in -> server IP"
+echo "   - media.clipora.in -> server IP"
+echo "3. Run SSL certificate commands above after DNS propagation"
+echo "4. Restart services: pm2 restart all"
 echo ""
 echo -e "${YELLOW}🔍 Useful commands:${NC}"
 echo "pm2 status              - Check services status"
