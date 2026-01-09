@@ -140,7 +140,7 @@ npm install -g pm2
 echo -e "${GREEN}Step 14: Starting services with PM2...${NC}"
 cd $APP_DIR
 sudo -u $USER pm2 delete all 2>/dev/null || true
-sudo -u $USER pm2 start ecosystem.config.js --env production
+sudo -u $USER pm2 start ecosystem.config.cjs --env production
 sudo -u $USER pm2 save
 pm2 startup systemd -u $USER --hp /home/$USER
 
