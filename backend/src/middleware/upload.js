@@ -3,7 +3,7 @@ import path from "path";
 
 // Storage for video uploads
 const videoStorage = multer.diskStorage({
-  destination: "backend/uploads/raw",
+destination: process.env.UPLOAD_DIR || "backend/uploads/raw",
   filename: (req, file, cb) => {
     const uniqueName = Date.now() + "-" + file.originalname;
     cb(null, uniqueName);
@@ -12,7 +12,7 @@ const videoStorage = multer.diskStorage({
 
 // Storage for thumbnail uploads
 const thumbnailStorage = multer.diskStorage({
-  destination: "videos/thumbs",
+destination: process.env.THUMB_DIR || "videos/thumbs",
   filename: (req, file, cb) => {
     // Generate versioned filename: videoId_timestamp.ext
     const videoId = req.params.id || req.body.videoId;
