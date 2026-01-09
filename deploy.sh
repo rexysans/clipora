@@ -127,7 +127,8 @@ chown $USER:$USER $APP_DIR/worker/.env
 chown $USER:$USER $APP_DIR/frontend/.env
 
 echo -e "${GREEN}Step 12: Configuring Nginx...${NC}"
-cp $APP_DIR/nginx.conf /etc/nginx/sites-available/clipora.conf
+# Use HTTP-only config initially, SSL will be added with certbot
+cp $APP_DIR/nginx-http.conf /etc/nginx/sites-available/clipora.conf
 ln -sf /etc/nginx/sites-available/clipora.conf /etc/nginx/sites-enabled/clipora.conf
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
@@ -144,10 +145,28 @@ pm2 startup systemd -u $USER --hp /home/$USER
 
 echo -e "${GREEN}Step 15: Setting up SSL with Certbot...${NC}"
 apt-get install -y certbot python3-certbot-nginx
-echo -e "${YELLOW}Run these commands manually after DNS is configured:${NC}"
-echo "certbot --nginx -d clipora.in -d www.clipora.in"
-echo "certbot --nginx -d api.clipora.in"
-echo "certbot --nginx -d media.clipora.in"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}⚠️  SSL SETUP REQUIRED AFTER DNS CONFIGURATION${NC}"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo -e "1. Configure your DNS records to point to this server:"
+echo -e "   ${GREEN}clipora.in${NC} → Your Server IP"
+echo -e "   ${GREEN}www.clipora.in${NC} → Your Server IP"
+echo -e "   ${GREEN}api.clipora.in${NC} → Your Server IP"
+echo -e "   ${GREEN}media.clipora.in${NC} → Your Server IP"
+echo ""
+echo -e "2. Wait for DNS propagation (5-60 minutes)"
+echo ""
+echo -e "3. Run these commands to enable SSL:"
+echo -e "   ${GREEN}sudo certbot --nginx -d clipora.in -d www.clipora.in${NC}"
+echo -e "   ${GREEN}sudo certbot --nginx -d api.clipora.in${NC}"
+echo -e "   ${GREEN}sudo certbot --nginx -d media.clipora.in${NC}"
+echo ""
+echo -e "4. Replace nginx-http.conf with full SSL config:"
+echo -e "   ${GREEN}sudo cp /var/www/clipora/nginx.conf /etc/nginx/sites-available/clipora.conf${NC}"
+echo -e "   ${GREEN}sudo systemctl restart nginx${NC}"
+echo ""
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 echo -e "${GREEN}Step 16: Setting up firewall...${NC}"
 ufw allow 22/tcp

@@ -1,7 +1,7 @@
 // PM2 ecosystem configuration file
 // Deploy with: pm2 start ecosystem.config.js
 
-module.exports = {
+export default {
   apps: [
     {
       name: 'clipora-api',
