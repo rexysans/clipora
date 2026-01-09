@@ -108,14 +108,19 @@ cd $APP_DIR
 sudo -u $USER npm install --production
 
 echo -e "${GREEN}Step 11: Configuring environment files...${NC}"
-if [ ! -f "$APP_DIR/.env" ]; then
-    cp $APP_DIR/.env.production $APP_DIR/.env
-    echo -e "${YELLOW}⚠️  Update database credentials in $APP_DIR/.env${NC}"
+if [ ! -f "$APP_DIR/backend/.env" ]; then
+    cp $APP_DIR/backend/.env.production $APP_DIR/backend/.env
+    echo -e "${YELLOW}⚠️  Update database credentials in $APP_DIR/backend/.env${NC}"
 fi
 
 if [ ! -f "$APP_DIR/worker/.env" ]; then
     cp $APP_DIR/worker/.env.production $APP_DIR/worker/.env
     echo -e "${YELLOW}⚠️  Update worker environment in $APP_DIR/worker/.env${NC}"
+fi
+
+if [ ! -f "$APP_DIR/frontend/.env" ]; then
+    cp $APP_DIR/frontend/.env.production $APP_DIR/frontend/.env
+    echo -e "${YELLOW}⚠️  Frontend environment configured${NC}"
 fi
 
 if [ ! -f "$APP_DIR/frontend/.env" ]; then
